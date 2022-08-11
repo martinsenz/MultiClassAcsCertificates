@@ -1,0 +1,50 @@
+# configuration of the certify experiment from Table 1.
+job: certify
+writepath: "res/experiments/certify.csv"
+
+# mehod to estimate domain gap
+method:
+  - HoelderCertificateInf1 # |d|_{∞} * |l|_{1}
+
+# datasets to be tested
+data:
+  - optdigits
+  - satimage
+  - pendigits
+  - eye_movements
+  - shuttle
+  - connect4
+
+# used loss function
+loss:
+  - ZeroOneLoss
+  #- HingeLoss
+  #- L1DistLoss
+  #- L2DistLoss
+
+# class weight
+weight:
+  - uniform
+  #- sqrt
+
+# classifier
+clf:
+  - sklearn.tree.DecisionTreeClassifier
+  - sklearn.linear_model.LogisticRegression
+ 
+# parameters of the certificate 
+delta:
+  #- 0.01
+  - 0.05
+  #- 0.1
+
+epsilon:
+  #- 0.05
+  - 0.1
+
+pac_bounds: true 
+
+# parameters for a RepeatedStratifiedKFold
+rskf:
+  n_repeats: 1
+  random_state: 123
