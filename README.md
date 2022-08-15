@@ -13,8 +13,7 @@ Supplementary material for our publication.
 }
 ```
 
-This publication is an extension of the [theory](https://2021.ecmlpkdd.org/wp-content/uploads/2021/07/sub_598.pdf) appliceable for the certification of binary classifications. The implementation of the certification approach for binary problems can be found [here](https://github.com/mirkobunse/AcsCertificates.jl).
-
+This publication is a multi-class extension of the [theory](https://2021.ecmlpkdd.org/wp-content/uploads/2021/07/sub_598.pdf) to certify the robustness of ACS-trained classifiers against label shift. The implementation of the certification method for binary problems can be found [here](https://github.com/mirkobunse/AcsCertificates.jl).
 
 ## Reproducing plots
 
