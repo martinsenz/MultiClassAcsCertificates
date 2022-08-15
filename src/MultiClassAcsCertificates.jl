@@ -57,4 +57,14 @@ function tightness(config_path="conf/exp/tightness.yml", standalone=true, full_t
     Plots.tightness(standalone, full_table)
 end
 
+"""
+    run_all_experiments()
+
+Conduct all experiments 
+"""
+function run_all_experiments()
+    certify()
+    tightness()
+end
+
 end
