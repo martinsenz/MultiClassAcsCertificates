@@ -47,7 +47,7 @@ end
 contours_coordinates(gap_func, level, scale) = py"contours_coordinates"(gap_func, level, scale)
 
 function _write_header(io)
-    println(io, "\\documentclass[runningheads]{llncs}")
+    println(io, "\\documentclass[]{article}")
     println(io, "\\usepackage[T1]{fontenc}")
     println(io, "\\usepackage{booktabs}")
     println(io, "\\usepackage{graphicx}")
