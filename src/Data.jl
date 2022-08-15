@@ -8,7 +8,6 @@ using LinearAlgebra
 using MetaConfigurations: parsefile
 using Random
 using StatsBase
-using CherenkovDeconvolution.DeconvUtil
 using Distances
 using ScikitLearn: @sk_import
 @sk_import datasets: fetch_openml
