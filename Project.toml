@@ -4,7 +4,6 @@ uuid = "511f8e24-5364-11ec-1a7e-43a2532b2fa8"
 [deps]
 AcsCertificates = "d482e0aa-54fd-4c7a-a598-2099f2703f7f"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-CherenkovDeconvolution = "7995dc16-b5cc-11e8-32a0-21341f07e0b5"
 Conda = "8f4d0f93-b110-5947-807f-2305c1781a2d"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Discretizers = "6e83dbb3-75ca-525b-8ae2-3751f0dd50b4"
