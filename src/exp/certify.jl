@@ -69,8 +69,20 @@ function _certify_trial(config)
         ϵ_val = Certification._ϵ(length(y[val]) * config["sample_size_multiplier"], config["delta"]) # onesided estimation error from pac bounds 
         L_S = L_S_empirical + ϵ_val # the upper bounded source loss 
 
+        # extract hoelder_conjugate from method name
+        hoelder_conjugate = ""
+        if occursin("Inf_1", config["method"])
+            hoelder_conjugate = "Inf_1"
+        elseif occursin("2_2", config["method"])
+            hoelder_conjugate = "2_2"
+        elseif occursin("1_Inf", config["method"])
+            hoelder_conjugate = "1_Inf"
+        else 
+            @error "Methode name $(config["method"]) not recognized!"
+        end
+
         # certify trained classifier on dataset
-        certificate = MultiClassCertificate(L, y_h_val, y[val]; δ=config["delta"], classes=classes, w_y=w_y)
+        certificate = MultiClassCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
         for eps in config["epsilon"]
             df_row = [i_rskf, config["data"], config["loss"], config["clf"], config["delta"], config["weight"], config["method"], pY_S, L_S, eps, Certification.max_Δp(certificate, eps)]
             push!(df, df_row)

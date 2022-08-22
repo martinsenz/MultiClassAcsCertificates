@@ -18,15 +18,16 @@ function _write_certify_table(df::DataFrame, save_path::String, standalone::Bool
             _write_header(io)
             println(io, "\\begin{document}")
         end
-        for gdf in groupby(df, ["loss", "weight", "delta", "epsilon"])
+        for gdf in groupby(df, ["method", "loss", "weight", "delta", "epsilon"])
             delta = gdf["delta"][1]
             epsilon = gdf["epsilon"][1]
             loss = gdf["loss"][1]
             weight = gdf["weight"][1]
+            method = _strategy_names(gdf["method"][1])
             println(io, "\\begin{table}[!p]")
             println(io, "\\center")
             println(io, "\\caption{Feasible class proportions \$\\Delta p^{*}\$, according to 
-                        \$\\lVert \\mathbf{d}\\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h}\\rVert_{1}\$ certificates,
+                        $(method) certificates,
                         which are computed for a $(loss) (weight=$(weight)) with \$\\epsilon=$(epsilon)\$ and \$\\delta=$(delta)\$.}")
             println(io, "\\small")
             println(io, "\\begin{tabular}{lllll}")

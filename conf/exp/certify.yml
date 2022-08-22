@@ -4,7 +4,9 @@ writepath: "res/experiments/certify.csv"
 
 # mehod to estimate domain gap
 method:
-  - HoelderCertificateInf1 # |d|_{∞} * |l|_{1}
+  - HoelderCertificateInf_1 # |d|_{∞} * |l|_{1}
+  - HoelderCertificate2_2 # |d|_{2} * |l|_{2}
+  - HoelderCertificate1_Inf # |d|_{1} * |l|_{∞}
 
 # datasets to be tested
 data:

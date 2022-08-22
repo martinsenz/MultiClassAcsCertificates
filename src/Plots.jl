@@ -59,9 +59,17 @@ function _write_header(io)
 end
 
 function _strategy_names(name)
-    if name == "HoelderCertificateInf1"
+    if name == "HoelderCertificateInf_1"
+        "\$ \\lVert \\mathbf{d} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
+    elseif name == "HoelderCertificatePlusInf_1"
+        "\$ \\lVert \\mathbf{d}_{+} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
+    elseif name == "HoelderCertificate2_2"
+        "\$ \\lVert \\mathbf{d} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
+    elseif name == "HoelderCertificatePlus2_2"
+        "\$ \\lVert \\mathbf{d}_{+} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
+    elseif name == "HoelderCertificate1_Inf"
         "\$ \\lVert \\mathbf{d} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
-    elseif name == "HoelderCertificatePlusInf1"
+    elseif name == "HoelderCertificatePlus1_Inf"
         "\$ \\lVert \\mathbf{d}_{+} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
     else
         @error("Method name $(name) not recognized!")
