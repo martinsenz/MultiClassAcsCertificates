@@ -5,8 +5,12 @@ writepath: "res/experiments/tightness.csv"
 
 # mehod to estimate domain gap
 method:
-  - HoelderCertificateInf1 # |d|_{∞} * |l|_{1}
-  - HoelderCertificatePlusInf1 # |d_{+}|_{∞} * |l|_{1}
+  - HoelderCertificateInf_1 # |d|_{∞} * |l|_{1}
+  - HoelderCertificatePlusInf_1 # |d_{+}|_{∞} * |l|_{1}
+  - HoelderCertificate2_2 # |d|_{2} * |l|_{2}
+  - HoelderCertificatePlus2_2 # |d_{+}|_{2} * |l|_{2}
+  - HoelderCertificate1_Inf # |d|_{1} * |l|_{∞}
+  - HoelderCertificatePlus1_Inf # |d_{+}|_{1} * |l|_{∞}
 
 # datasets to be tested
 data:
