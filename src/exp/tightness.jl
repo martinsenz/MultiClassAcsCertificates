@@ -82,8 +82,18 @@ function _tightness_trial(config)
         ϵ_val = Certification._ϵ(length(y[val]) * config["sample_size_multiplier"], config["delta"])
 
         # set up certification method
-        certificate = MultiClassCertificate(L, y_h_val, y[val]; δ=config["delta"], classes=classes, w_y=w_y)
+        hoelder_conjugate = ""
+        if occursin("Inf_1", config["method"])
+            hoelder_conjugate = "Inf_1"
+        elseif occursin("2_2", config["method"])
+            hoelder_conjugate = "2_2"
+        elseif occursin("1_Inf", config["method"])
+            hoelder_conjugate = "1_Inf"
+        else 
+            @error "Methode name $(config["method"]) not recognized!"
+        end
         variant_plus = occursin("Plus", config["method"]) ? true : false # variant_plus = true => |d_(+)|_{∞} * |l|_{1}
+        certificate = MultiClassCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
         ℓNormBounded = Inf
         ℓNorm = Inf
 

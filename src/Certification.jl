@@ -154,8 +154,12 @@ function domaingap_error(method_name, ℓNormBounded, Py_S, Py_T; variant_plus=f
     if variant_plus
         d = max.(d, 0.0)
     end
-    if method_name in [ "HoelderCertificateInf1", "HoelderCertificatePlusInf1" ]
-        return norm(d, Inf) .* ℓNormBounded
+    if method_name ∈ [ "HoelderCertificateInf_1", "HoelderCertificatePlusInf_1" ]
+        norm(d, Inf) .* ℓNormBounded
+    elseif method_name ∈ [ "HoelderCertificate2_2", "HoelderCertificatePlus2_2" ]
+        norm(d, 2) .* ℓNormBounded
+    elseif method_name ∈ [ "HoelderCertificate1_Inf", "HoelderCertificatePlus1_Inf" ]
+        norm(d, 1) .* ℓNormBounded
     else
         @error "method name $(method_name) not recognized!"
     end

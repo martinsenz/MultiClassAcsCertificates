@@ -204,8 +204,8 @@ end
 
 function _caption_from_filename(filename)
     f = split(filename, "_")
-    method_name = _strategy_names(f[1])
-    clf_name = f[2]
+    method_name = _strategy_names(f[1] * "_" * f[2])
+    clf_name = f[3]
     if clf_name == "LogReg"
         clf_name = "Logistic Regression"
     elseif clf_name == "DT"
@@ -213,10 +213,10 @@ function _caption_from_filename(filename)
     else
         @error "Classifier name $(clf_name) not recognized!"
     end
-    loss = f[3]
-    weight = f[4]
-    delta = f[5]
-    dataset = f[6]
+    loss = f[4]
+    weight = f[5]
+    delta = f[6]
+    dataset = f[7]
     "\\textbf{$(dataset)}: $(method_name) with $(clf_name), $(loss) (weight=$(weight)) and \$\\delta=$(delta)\$." 
 end
 
