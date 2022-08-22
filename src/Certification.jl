@@ -1,4 +1,6 @@
 module Certification
+using ..MultiClassAcsCertificates
+using MultiClassAcsCertificates.Plots
 using AcsCertificates
 using LossFunctions
 using ..Data
@@ -37,7 +39,8 @@ on the predictions `y_h` and ground-truth class labels `y ∈ {1, ..., N}` and h
 for the loss function `L` with probability at least `1 - δ`.
 
 ### Keyword Arguments
-- `δ = 0.05`
+- `hoelder_conjugate = "Inf_1"` selected hölder conjugate 
+- `δ = 0.05` 
 - `classes = sort(unique(y))` class labels
 - `w_y = [1.,...,1.]` optional class weights
 - `pac_bounds = true` used upper bounded classwise loss
@@ -49,28 +52,50 @@ struct MultiClassCertificate
     ℓNorm :: Float64
     δ_y :: Vector{Float64}
     empirical_ℓ_y ::Vector{Float64}
-    m_y :: Vector{Int}
+    m_y :: Vector{Int} 
     L::SupervisedLoss
     δ::Float64
     classes::Vector{Int64}
     w_y::Vector{Float64}
     pac_bounds::Bool
-    function MultiClassCertificate(L, y_h, y; δ=0.05, classes=sort(unique(y)), w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+    hoelder_conjugate :: String
+    function MultiClassCertificate(L, y_h, y; hoelder_conjugate="Inf_1", δ=0.05, classes=sort(unique(y)), w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
         m_y = Data.class_counts(y, classes)
         empirical_ℓ_y = w_y .* empirical_classwise_risk(L, y_h, y, classes)
-        ℓ_norm = norm(empirical_ℓ_y, 1)
+        if hoelder_conjugate == "Inf_1" # |d|_{∞} * |l|_{1}
+            ℓ_norm = norm(empirical_ℓ_y, 1)
+        elseif hoelder_conjugate == "2_2" # |d|_{2} * |l|_{2}
+            ℓ_norm = norm(empirical_ℓ_y, 2)
+        elseif hoelder_conjugate == "1_Inf" # |d|_{1} * |l|_{∞}
+            ℓ_norm = norm(empirical_ℓ_y, Inf) 
+        else
+            @error "Does not recognized hoelder_conjugate=$(hoelder_conjugate)!"
+        end
         ϵ_bound, δ_y = begin  
             if pac_bounds
-                optimize_error(m_y, δ; tol=tol, n_trials=n_trials)
+                optimize_error(hoelder_conjugate, empirical_ℓ_y, m_y, δ; tol=tol, n_trials=n_trials)
             else
                 0.0, fill(0.0, length(classes))
             end
         end
-        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, w_y, pac_bounds)
+        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, w_y, pac_bounds, hoelder_conjugate)
     end  
 end
 
-function _optimize_error(m_y, δ; tol=1e-4)
+function optimize_error(hoelder_conjugate, l, m_y, δ; tol=1e-4, n_trials=3)
+    min_ϵ = Inf
+    min_δ_y = fill(0.0, length(m_y))
+    for i in 1:n_trials
+        ϵ, δ_y = _optimize_error(hoelder_conjugate, l, m_y, δ; tol=tol)
+        if ϵ < min_ϵ
+            min_ϵ = ϵ
+            min_δ_y = δ_y
+        end
+    end
+    min_ϵ, min_δ_y
+end
+
+function _optimize_error(hoelder_conjugate, l, m_y, δ; tol=1e-4)
     N = length(m_y)
     model = Model(NLopt.Optimizer)
     register(model, :_δ, 2, _δ; autodiff = true)
@@ -78,24 +103,32 @@ function _optimize_error(m_y, δ; tol=1e-4)
     set_optimizer_attribute(model, "maxtime", 5.0)
     @variable(model, tol <= ϵ[1:N] <= 1/tol)
     @NLconstraint(model, sum(_δ(m_y[i], ϵ[i]) for i=1:N) <= δ)
-    @NLobjective(model, Min, sum(ϵ[i] for i=1:N))
-    JuMP.optimize!(model)
-    ϵ_y = vcat((JuMP.value(ϵ[i]) for i in 1:N)...)
-    δ_y = vcat((_δ(m_y[i], ϵ_y[i]) for i in 1:N)...)
-    sum(ϵ_y), δ_y
-end
-
-function optimize_error(m_y, δ; tol=1e-4, n_trials=3)
-    min_ϵ = Inf
-    min_δ_y = fill(0.0, length(m_y))
-    for i in 1:n_trials
-        ϵ, δ_y = _optimize_error(m_y, δ; tol=tol)
-        if ϵ < min_ϵ
-            min_ϵ = ϵ
-            min_δ_y = δ_y
+    if hoelder_conjugate == "Inf_1" # |l|_{1}
+        @NLobjective(model, Min, sum(ϵ[i] for i=1:N))
+        JuMP.optimize!(model)
+        ϵ_y = vcat((JuMP.value(ϵ[i]) for i in 1:N)...)
+        δ_y = vcat((_δ(m_y[i], ϵ_y[i]) for i in 1:N)...)
+        sum(ϵ_y), δ_y
+    elseif hoelder_conjugate == "2_2" # |l|_{2}
+        @NLobjective(model, Min, sum((ϵ[i] + l[i])^2 for i=1:N))
+        JuMP.optimize!(model)
+        ϵ_y = vcat((JuMP.value(ϵ[i]) for i in 1:N)...)
+        δ_y = vcat((_δ(m_y[i], ϵ_y[i]) for i in 1:N)...)
+        sqrt(sum(_δ(m_y[i], ϵ_y[i]) for i=1:N)), δ_y
+    elseif hoelder_conjugate == "1_Inf" # |l|_{∞}
+        sort_id = sortperm(l, rev=true)
+        id_max = sort_id[1]
+        @NLobjective(model, Min, ϵ[id_max])
+        for i in 1:N 
+            @NLconstraint(model, (ϵ[id_max]-ϵ[i]) >= (l[sort_id][i]-l[id_max]) )
         end
+        JuMP.optimize!(model)
+        ϵ_y = vcat((JuMP.value(ϵ[i]) for i in 1:N)...)
+        δ_y = vcat((_δ(m_y[i], ϵ_y[i]) for i in 1:N)...)
+        norm(l[sort_id] .+ ϵ_y, Inf), δ_y[sort_id]
+    else
+        @error "Does not recognized hoelder_conjugate = $(hoelder_conjugate)!"
     end
-    min_ϵ, min_δ_y
 end
 
 """
@@ -149,8 +182,19 @@ function p_range(c::MultiClassCertificate, ϵ::Float64)
     vcat(([[p_S[i] - max_Δp(c, ϵ), p_S[i] + max_Δp(c, ϵ)]] for i in 1:length(c.classes))...)
 end
 
+function _print_hoelder_conjugate(c::MultiClassCertificate)
+    conjugate = c.hoelder_conjugate
+    if conjugate == "Inf_1"
+        "(∞,1)"
+    elseif conjugate == "2_2"
+        "(2,2)"
+    elseif conjugate == "1_Inf"
+        "(1,∞)"
+    end
+end
+
 function Base.show(io::IO, ::MIME"text/plain", c::MultiClassCertificate)
-    println(io, "┌ Certificate on label shift robustness:")
+    println(io, "┌ Hoelder certificate $(_print_hoelder_conjugate(c)) on label shift robustness:")
     println(io, "│ * max_Δp = ", max_Δp(c, 0.05), " at ϵ=0.05")
     println(io, "│ * p_range at ϵ=0.05:")
     for i in 1:length(c.m_y)

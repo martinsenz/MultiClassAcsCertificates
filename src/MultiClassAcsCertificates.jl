@@ -28,14 +28,15 @@ using .Data
 include("Util.jl")
 using .Util
 
+include("Plots.jl")
+using .Plots
+
 include("Certification.jl")
 using .Certification
 
 include("Experiments.jl")
 using .Experiments
 
-include("Plots.jl")
-using .Plots
 
 """
     certify(config_path)
