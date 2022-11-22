@@ -7,6 +7,7 @@ export Util
 export Experiments
 export Plots
 export SkObject
+export NormedCertificate
 
 """
     SkObject(class_name, configuration)
@@ -36,7 +37,6 @@ using .Certification
 
 include("Experiments.jl")
 using .Experiments
-
 
 """
     certify(config_path)

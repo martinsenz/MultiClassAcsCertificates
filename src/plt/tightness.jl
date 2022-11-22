@@ -5,10 +5,10 @@ Generate LaTeX tables from the results of the tightness experiment.
 """
 function tightness(standalone::Bool=true, full_table::Bool=true; df_path::String="res/experiments/tightness.csv", save_path::String="res/plots/")
     df = CSV.read(df_path, DataFrame)
-    df["cert_bound"] = df["emp_loss_val"] .+ df["ϵ_val"] .+ df["ϵ_cert"] # upper bounded L_S + ϵ_cert
-    df["tst_bound"] = df["emp_loss_tst"] .+ df["ϵ_tst"] # upper bounded L_T; 
-    df["dist_cert_tst_bound"] = abs.(df["tst_bound"] .- df["cert_bound"]) # absolute deviation between L_S(h) + ϵ and L_T(h)
-    df["dist_cert_tst"] = df["emp_loss_tst"] .- df["cert_bound"] # difference 
+    df[!,"cert_bound"] = df[!,"emp_loss_val"] .+ df[!,"ϵ_val"] .+ df[!,"ϵ_cert"] # upper bounded L_S + ϵ_cert
+    df[!,"tst_bound"] = df[!,"emp_loss_tst"] .+ df[!,"ϵ_tst"] # upper bounded L_T; 
+    df[!,"dist_cert_tst_bound"] = abs.(df[!,"tst_bound"] .- df[!,"cert_bound"]) # absolute deviation between L_S(h) + ϵ and L_T(h)
+    df[!,"dist_cert_tst"] = df[!,"emp_loss_tst"] .- df[!,"cert_bound"] # difference 
     dataset_names = []
     scale = 100 # Scaling used for trenary plots. Should not be changed.
 
@@ -18,41 +18,41 @@ function tightness(standalone::Bool=true, full_table::Bool=true; df_path::String
     for df_trial in groupby(df, ["dataset", "method", "clf", "delta", "weight", "loss"])
 
         ℓNormBounded_agg = combine(df_trial, "ℓNormBounded" => mean)
-        method_name = df_trial["method"][1]
-        ℓNormBounded = ℓNormBounded_agg[1][1]
-        pY_S = eval(Meta.parse(df_trial["pY_S"][1]))
+        method_name = df_trial[!,"method"][1]
+        ℓNormBounded = ℓNormBounded_agg[!,1][1]
+        pY_S = eval(Meta.parse(df_trial[!,"pY_S"][1]))
         variant_plus = occursin("Plus", method_name) ? true : false
 
         gap = nothing
         gap(x) = Certification.domaingap_error(method_name, ℓNormBounded, pY_S, x; variant_plus=variant_plus)
         df_agg = combine(groupby(df_trial, "pY_T"), "dist_cert_tst_bound" => mean, "dist_cert_tst" => mean, "cert_bound" => mean, 
                                                     "tst_bound" => mean, "ϵ_cert" => mean)
-        pY_T_points = map(i -> tuple(Int.(round.(eval(Meta.parse(df_agg["pY_T"][i])) .* scale))...), 1:nrow(df_agg))
-        pY_S_points = map(i -> tuple(Int.(round.(eval(Meta.parse(df_trial["pY_S"][i])) .* scale))...), 1:nrow(df_agg))
-        interpolator_gap = Util.NearestNDInterpolator(pY_T_points, df_agg["ϵ_cert_mean"])
+        pY_T_points = map(i -> tuple(Int.(round.(eval(Meta.parse(df_agg[!,"pY_T"][i])) .* scale))...), 1:nrow(df_agg))
+        pY_S_points = map(i -> tuple(Int.(round.(eval(Meta.parse(df_trial[!,"pY_S"][i])) .* scale))...), 1:nrow(df_agg))
+        interpolator_gap = Plots.NearestNDInterpolator(pY_T_points, df_agg[!,"ϵ_cert_mean"])
         interpolate_gap((x,y,z)) = interpolator_gap(x,y,z)
-        interpolator_dist = Util.NearestNDInterpolator(pY_T_points, df_agg["cert_bound_mean"])
+        interpolator_dist = Plots.NearestNDInterpolator(pY_T_points, df_agg[!,"cert_bound_mean"])
         interpolate_dist((x,y,z)) = interpolator_dist(x,y,z)
 
         # produce identifiable filenames
         clf_name = ""
-        if df_trial["clf"][1] == "sklearn.tree.DecisionTreeClassifier"
+        if df_trial[!,"clf"][1] == "sklearn.tree.DecisionTreeClassifier"
             clf_name = "DT"
         end
-        if df_trial["clf"][1] == "sklearn.linear_model.LogisticRegression"
+        if df_trial[!,"clf"][1] == "sklearn.linear_model.LogisticRegression"
             clf_name = "LogReg"
         end
-        loss = df_trial["loss"][1]
-        weight = df_trial["weight"][1]
-        delta = replace(string(df_trial["delta"][1]), "." => ",")
-        dataset = df_trial["dataset"][1]
+        loss = df_trial[!,"loss"][1]
+        weight = df_trial[!,"weight"][1]
+        delta = replace(string(df_trial[!,"delta"][1]), "." => ",")
+        dataset = df_trial[!,"dataset"][1]
         name = "$(method_name)_$(clf_name)_$(loss)_$(weight)_$(delta)_$(dataset)"
         
         # create and save treanry plots
-        if !ispath("$(save_path)trenary/$(df_trial["dataset"][1])")
-            mkdir("$(save_path)trenary/$(df_trial["dataset"][1])")
+        if !ispath("$(save_path)trenary/$(df_trial[!,"dataset"][1])")
+            mkdir("$(save_path)trenary/$(df_trial[!,"dataset"][1])")
         end
-        push!(dataset_names, df_trial["dataset"][1])
+        push!(dataset_names, df_trial[!,"dataset"][1])
         _trenary_plot_acc(pY_T_points, pY_S_points, interpolate_dist, "$(save_path)trenary/$(dataset)/$(name)_acc.png"; scale=scale)
         _trenary_plot_predicted_gap(gap, pY_T_points, pY_S_points, interpolate_gap, "$(save_path)trenary/$(dataset)/$(name)_gap.png"; vmin=0.0, scale=scale)
     end
@@ -71,11 +71,11 @@ function _tightness_table(df; full_table=true, n_digits=4)
             groupby(df, ["dataset", "method", "delta", "weight", "loss"])
         end 
     res = combine(gdf, "dist_cert_tst_bound" => mean, "dist_cert_tst_bound" => std, "dist_cert_tst_bound" => q_1, "dist_cert_tst_bound" => q_2, "dist_cert_tst_bound" => q_3)
-    res["dist_cert_tst_bound_mean"] = round.(res["dist_cert_tst_bound_mean"]; digits=n_digits)
-    res["dist_cert_tst_bound_std"] = round.(res["dist_cert_tst_bound_std"]; digits=n_digits)
-    res["dist_cert_tst_bound_q_1"] = round.(res["dist_cert_tst_bound_q_1"]; digits=n_digits)
-    res["dist_cert_tst_bound_q_2"] = round.(res["dist_cert_tst_bound_q_2"]; digits=n_digits)
-    res["dist_cert_tst_bound_q_3"] = round.(res["dist_cert_tst_bound_q_3"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_mean"] = round.(res[!,"dist_cert_tst_bound_mean"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_std"] = round.(res[!,"dist_cert_tst_bound_std"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_q_1"] = round.(res[!,"dist_cert_tst_bound_q_1"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_q_2"] = round.(res[!,"dist_cert_tst_bound_q_2"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_q_3"] = round.(res[!,"dist_cert_tst_bound_q_3"]; digits=n_digits)
     res
 end
 
@@ -95,17 +95,17 @@ function _write_tightness_table(df, save_path; standalone=true, full_table=true)
         for gdf in groupby(df, gdf_keys)
             cap = ""
             if full_table
-                clf_name = gdf["clf"][1]
+                clf_name = gdf[!,"clf"][1]
                 clf_name = clf_name[findlast(".", clf_name)[1]+1:end]
-                delta = gdf["delta"][1]
-                loss = gdf["loss"][1]
-                weight = gdf["weight"][1]
+                delta = gdf[!,"delta"][1]
+                loss = gdf[!,"loss"][1]
+                weight = gdf[!,"weight"][1]
                 cap = "\\caption{MAD and quartiles of the absolute difference between \$\\hat{L}_{S} + \\epsilon\$ and \$\\hat{L}_{\\mathcal{T}} + \\epsilon_{\\mathcal{T}}\$
                        ($(clf_name), $(loss) (weight=$(weight)) and \$\\delta=$(delta)\$) }"
             else
                 cap = "\\caption{MAD and quartiles of the absolute difference between \$\\hat{L}_{S} + \\epsilon\$ and \$\\hat{L}_{\\mathcal{T}} + \\epsilon_{\\mathcal{T}}\$.}"
             end
-            println(io, "\\begin{table}[!p]")
+            println(io, "\\begin{table}[H]")
             println(io, "\\center")
             println(io, cap)
             println(io, "\\small")
@@ -114,7 +114,7 @@ function _write_tightness_table(df, save_path; standalone=true, full_table=true)
             println(io, "data set & method & MAD & \$Q_{1}\$ & \$Q_{2}\$ & \$Q_{3}\$ \\\\")
             println(io, "\\midrule")
             for (i,row) in enumerate(eachrow(gdf))
-                appendix = mod(i, length(df["dataset"]) / length(unique(df["dataset"]))) == 0 ? "[.5em]" : ""
+                appendix = mod(i, length(df[!,"dataset"]) / length(unique(df[!,"dataset"]))) == 0 ? "[.5em]" : ""
                 println(io, "$(replace(row["dataset"], "_" => " ")) & $(_strategy_names(row["method"])) & 
                                                     \$$(row["dist_cert_tst_bound_mean"]) \\pm $(row["dist_cert_tst_bound_mean"])\$ &
                                                     \$$(row["dist_cert_tst_bound_q_1"])\$ & 
@@ -134,10 +134,10 @@ end
 
 function _trenary_plot_acc(points_pY, pY_S_points, interpolate_function, savepath; scale=100)
     d = Dict()
-    for (i,j,k) in Util.simplex_iterator(scale)
+    for (i,j,k) in Plots.simplex_iterator(scale)
         push!(d, (i,j) => interpolate_function((i,j,k)))
     end
-    figure, tax = Util.ternary.figure(scale=scale)
+    figure, tax = Plots.ternary.figure(scale=scale)
     figure.set_size_inches(10, 10)
     tax.boundary(linewidth=3.0)
     tax.gridlines(multiple=scale/10, color="white")
@@ -169,7 +169,7 @@ function _trenary_plot_predicted_gap(gap, points_pY, pY_S_points, interpolate_fu
     if gap !== nothing
         figure, tax = Plots.contours_coordinates(gap, collect(0.05:0.05:10), 100)
     else
-        figure, tax = Util.ternary.figure(scale=scale)
+        figure, tax = Plots.ternary.figure(scale=scale)
     end
     figure.set_size_inches(10, 10)
     tax.boundary(linewidth=3.0)
@@ -177,7 +177,7 @@ function _trenary_plot_predicted_gap(gap, points_pY, pY_S_points, interpolate_fu
 
     scale = 100
     d = Dict()
-    for (i,j,k) in Util.simplex_iterator(scale)
+    for (i,j,k) in Plots.simplex_iterator(scale)
         push!(d, (i,j) => interpolate_function((i,j,k)))
     end
     tax.scatter(pY_S_points, marker="D", label=L"$\mathbf{p}_{S}$", color="red", zorder=5)  
@@ -204,19 +204,19 @@ end
 
 function _caption_from_filename(filename)
     f = split(filename, "_")
-    method_name = _strategy_names(f[1] * "_" * f[2])
-    clf_name = f[3]
+    method_name = _strategy_names(f[1] * "_" * f[2] * "_" * f[3])
+    clf_name = f[4]
     if clf_name == "LogReg"
         clf_name = "Logistic Regression"
     elseif clf_name == "DT"
-        clf_name == "Decision Tree Classifier"
+        clf_name = "Decision Tree Classifier"
     else
         @error "Classifier name $(clf_name) not recognized!"
     end
-    loss = f[4]
-    weight = f[5]
-    delta = f[6]
-    dataset = f[7]
+    loss = f[5]
+    weight = f[6]
+    delta = f[7]
+    dataset = f[8]
     "\\textbf{$(dataset)}: $(method_name) with $(clf_name), $(loss) (weight=$(weight)) and \$\\delta=$(delta)\$." 
 end
 
@@ -230,7 +230,7 @@ function _print_trenary_plots(dataset_names; standalone=true, load_dir::String="
             if dataset ∈ dataset_names
                 files = Base.Filesystem.readdir(load_dir * dataset * "/")
                 for file in unique(map(x -> chop(x; tail=8), files))
-                    println(io, "\\begin{figure}[!p]")
+                    println(io, "\\begin{figure}[H]")
                     println(io, "\\centering")
                     println(io, "\\begin{subfigure}[b]{.49\\textwidth}")
                     println(io, "\\centering")
@@ -241,7 +241,7 @@ function _print_trenary_plots(dataset_names; standalone=true, load_dir::String="
                     println(io, "\\begin{subfigure}[b]{.49\\textwidth}")
                     println(io, "\\centering")
                     println(io, "\\includegraphics[width=\\textwidth]{$(dataset * "/" * file)_acc}")
-                    println(io, "\\caption*{\$ |\\hat{L}_{S} + \\epsilon - \\hat{L}_{\\mathcal{T}} + \\epsilon_{\\mathcal{T}}| \$}")
+                    println(io, "\\caption*{\$ |\\hat{L}_{S} + \\epsilon - \\hat{L}_{\\mathcal{T}} - \\epsilon_{\\mathcal{T}}| \$}")
                     println(io, "\\end{subfigure}")
                     println(io, "\\hfill")
                     println(io, "\\caption{ $(_caption_from_filename(file)) }" )

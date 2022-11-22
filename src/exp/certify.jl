@@ -23,7 +23,7 @@ end
 function _certify_trial(config)
     # setup experiment
     clf_name = config["clf"][((findlast(".", config["clf"])...)+1):end]
-    @info "Trial $(config["trial_nr"]): $(config["method"]) with classifier=$(clf_name), loss=$(config["loss"]) (weight=$(config["weight"])) and δ=$(config["delta"]) on dataset=$(config["data"])"
+    @info "Trial $(config["trial_nr"]): $(config["method"]) with classifier=$(clf_name), loss=$(config["loss"]), class weight=$(config["weight"]) and δ=$(config["delta"]) on dataset=$(config["data"])"
     rskf = SkObject("sklearn.model_selection.RepeatedStratifiedKFold", config["rskf"])
     clf = SkObject(config["clf"])
     Random.seed!(config["rskf"]["random_state"]) 
@@ -82,7 +82,7 @@ function _certify_trial(config)
         end
 
         # certify trained classifier on dataset
-        certificate = MultiClassCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
+        certificate = NormedCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
         for eps in config["epsilon"]
             df_row = [i_rskf, config["data"], config["loss"], config["clf"], config["delta"], config["weight"], config["method"], pY_S, L_S, eps, Certification.max_Δp(certificate, eps)]
             push!(df, df_row)

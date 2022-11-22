@@ -45,6 +45,9 @@ function __init__()
     """
 end
 contours_coordinates(gap_func, level, scale) = py"contours_coordinates"(gap_func, level, scale)
+ternary = pyimport("ternary")
+simplex_iterator = pyimport("ternary.helpers").simplex_iterator
+NearestNDInterpolator= pyimport("scipy.interpolate").NearestNDInterpolator
 
 function _write_header(io)
     println(io, "\\documentclass[]{article}")
@@ -56,20 +59,21 @@ function _write_header(io)
     println(io, "\\usepackage{float}")
     println(io, "\\usepackage{subcaption}")
     println(io, "\\setlength{\\tabcolsep}{6pt}")
+    println(io, "\\usepackage{float}")
 end
 
 function _strategy_names(name)
-    if name == "HoelderCertificateInf_1"
+    if name == "NormedCertificate_Inf_1"
         "\$ \\lVert \\mathbf{d} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
-    elseif name == "HoelderCertificatePlusInf_1"
+    elseif name == "NormedCertificatePlus_Inf_1"
         "\$ \\lVert \\mathbf{d}_{+} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
-    elseif name == "HoelderCertificate2_2"
+    elseif name == "NormedCertificate_2_2"
         "\$ \\lVert \\mathbf{d} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
-    elseif name == "HoelderCertificatePlus2_2"
+    elseif name == "NormedCertificatePlus_2_2"
         "\$ \\lVert \\mathbf{d}_{+} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
-    elseif name == "HoelderCertificate1_Inf"
+    elseif name == "NormedCertificate_1_Inf"
         "\$ \\lVert \\mathbf{d} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
-    elseif name == "HoelderCertificatePlus1_Inf"
+    elseif name == "NormedCertificatePlus_1_Inf"
         "\$ \\lVert \\mathbf{d}_{+} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
     else
         @error("Method name $(name) not recognized!")

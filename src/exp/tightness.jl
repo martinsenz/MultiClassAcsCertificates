@@ -93,7 +93,7 @@ function _tightness_trial(config)
             @error "Methode name $(config["method"]) not recognized!"
         end
         variant_plus = occursin("Plus", config["method"]) ? true : false # variant_plus = true => |d_(+)|_{∞} * |l|_{1}
-        certificate = MultiClassCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
+        certificate = NormedCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
         ℓNormBounded = Inf
         ℓNorm = Inf
 

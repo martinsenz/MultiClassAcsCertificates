@@ -1,6 +1,6 @@
 # Certifiable Active Class Selection in Multi-Class Classification
 
-Supplementary material for our publication.
+Supplementary material for our [publication](https://ceur-ws.org/Vol-3259/ialatecml_paper6.pdf).
 
 ```bibtex
 @InProceedings{senz2022active,
@@ -17,7 +17,7 @@ This publication is a multi-class extension of the [theory](https://2021.ecmlpkd
 
 ## Reproducing plots
 
-**Preliminaries:** You need to have `julia` and `pdflatex` installed. We conducted the experiments with Julia v1.6 and TexLive on Linux. Sometimes the `Manifest.toml` file causes trouble; since the dependencies are already defined in the `Project.toml`, you should be able to safely delete the manifest file and try again without it.
+**Preliminaries:** You need to have `julia` and `pdflatex` installed. We conducted the experiments with Julia v1.8 and TexLive on Linux. Sometimes the `Manifest.toml` file causes trouble; since the dependencies are already defined in the `Project.toml`, you should be able to safely delete the manifest file and try again without it.
 
 ### Project Setup in a Julia REPL
 
@@ -42,14 +42,14 @@ More severe adaptations are possible through changing the code. To this end, the
 
 ## Using our certificates elsewhere
 
-This project can become a dependency in any other Julia project. Certificates can then be created by simply calling the constructor `MultiClassAcsCertificates(L, y_h, y; kwargs...)` with a loss function `L`, predictions `y_h`, and the validation ground-truths `y`. The keyword arguments provide additional parameters like delta and class weights. Many decomposable loss functions are already available through [the LossFunctions.jl package](https://github.com/JuliaML/LossFunctions.jl).
+This project can become a dependency in any other Julia project. Certificates can then be created by simply calling the constructor `NormedCertificate(L, y_h, y; kwargs...)` with a loss function `L`, predictions `y_h`, and the validation ground-truths `y`. The keyword arguments provide additional parameters like delta and class weights. Many decomposable loss functions are already available through [the LossFunctions.jl package](https://github.com/JuliaML/LossFunctions.jl).
 
 ```julia
 # let y_val be validation labels and y_h be corresponding predictions
 using MultiClassAcsCertificates.Certification, LossFunctions
-c = MultiClassCertificate(ZeroOneLoss(), y_h, y_val)
+c = NormedCertificate(ZeroOneLoss(), y_h, y_val)
 
-?MultiClassCertificate # inspect the documentation
+?NormedCertificate # inspect the documentation
 ```
 
 ## Support

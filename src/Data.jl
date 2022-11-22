@@ -1,6 +1,4 @@
-__precompile__(false)
 module Data
-
 using DataFrames
 using Discretizers
 using Distributions
@@ -9,9 +7,10 @@ using MetaConfigurations: parsefile
 using Random
 using StatsBase
 using Distances
-using ScikitLearn: @sk_import
-@sk_import datasets: fetch_openml
-@sk_import preprocessing: MinMaxScaler
+using PyCall
+
+fetch_openml(args...; kwargs...) = pyimport("sklearn.datasets").fetch_openml(args...; kwargs...)
+MinMaxScaler(args...; kwargs...) = pyimport("sklearn.preprocessing").MinMaxScaler(args...; kwargs...)
 
 mutable struct DataSet
     X_data::Matrix{Float32}

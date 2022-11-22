@@ -15,6 +15,10 @@ using
     CSV,
     PyCall
 
+# ignore all convergence warnings
+warnings = pyimport("warnings")
+warnings.filterwarnings("ignore") 
+
 function run(configfile::String)
     c = parsefile(configfile)
     funname = "Experiments." * c["job"]    

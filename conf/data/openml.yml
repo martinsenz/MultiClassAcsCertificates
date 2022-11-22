@@ -38,7 +38,7 @@ bng:
   id: 271
 
 # https://www.openml.org/search?type=data&status=active&id=1044&sort=runs
-eye_movements:
+eyemovements:
   id: 1044
 
 # https://www.openml.org/search?type=data&sort=qualities.NumberOfClasses&status=any&qualities.NumberOfClasses=gte_2&format=ARFF&order=desc&id=40668
