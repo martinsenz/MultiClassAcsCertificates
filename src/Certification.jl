@@ -4,6 +4,8 @@ using ..Data
 using LinearAlgebra
 using JuMP
 using NLopt
+using AcsCertificates.Certificates: Δℓ_MaxMin, OneSided_Δℓ_MinMax, Δℓ_MinMax, Δℓ_Objective, _optimize_Δℓ, objective_value, value,
+                                    is_feasible, effective_δ, onesided, optimize_Δℓ
 export domaingap_error, empirical_classwise_risk, NormedCertificate, p_range, _ϵ
 
 # one-sided maximum error with probability at least 1-δ
@@ -26,6 +28,30 @@ end
 
 # supertype of the normed certifications
 abstract type NormedCertification end
+
+"""
+    SignedCertificate(L, y_h, y) 
+
+A multiclass certificate about the robustness of an hypothesis `h` with respect to changes in the class proportions.
+This certification predicts the signed domain-induced error of single shifts in the label shift distribution.
+
+"""
+struct SignedCertificate
+    L::SupervisedLoss
+    empirical_ℓ_y::Vector{Float64}
+    m_y::Vector{Int}
+    δ::Float64
+    classes::Vector{Int64}
+    pY_S::Vector{Float64}
+    w_y::Vector{Float64}
+    pac_bounds::Bool
+    function SignedCertificate(L, y_h, y; 
+        δ=0.05, classes=sort(unique(y)), pY_S=nothing, w_y=fill(1., length(unique(y))), pac_bounds=true) 
+        pY_S = (pY_S === nothing) ? Data.class_proportion(y, classes) : pY_S
+        m_y = Data.class_counts(y, classes)
+        new(L, empirical_classwise_risk(L, y_h, y, classes), m_y, δ, classes, pY_S, w_y, pac_bounds)
+    end
+end
 
 """
     NormedCertificate(L, y_h, y)
@@ -57,6 +83,7 @@ function NormedCertificate(L, y_h, y; kwargs...)
         :tol => get(kwargs, :tol, 1e-4),
         :n_trials => get(kwargs, :n_trials, 3)
     )
+    configuration[:pY_S] = get(kwargs, :pY_S, Data.class_proportion(y, configuration[:classes]))
     if hoelder_conjugate == "Inf_1"
         NormedCertificate_Inf_1(L, y_h, y; configuration...)
     elseif hoelder_conjugate == "2_2"
@@ -75,17 +102,21 @@ This certificate based on the hoelder estimate |d|_{1} * |l|_{∞}.
 See `NormedCertificate` for documentation.
 """
 struct NormedCertificate_1_Inf <: NormedCertification
-    ℓNormBounded :: Float64
-    ℓNorm :: Float64
-    δ_y :: Vector{Float64}
-    empirical_ℓ_y ::Vector{Float64}
-    m_y :: Vector{Int} 
+    ℓNormBounded::Float64
+    ℓNorm::Float64
+    δ_y::Vector{Float64}
+    empirical_ℓ_y::Vector{Float64}
+    m_y::Vector{Int} 
     L::SupervisedLoss
     δ::Float64
     classes::Vector{Int64}
+    pY_S::Vector{Float64}
     w_y::Vector{Float64}
     pac_bounds::Bool
-    function NormedCertificate_1_Inf(L, y_h, y; δ=0.05, classes=sort(unique(y)), w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+    function NormedCertificate_1_Inf(L, y_h, y; 
+        δ=0.05, classes=sort(unique(y)), pY_S=nothing, w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+        
+        pY_S = (pY_S === nothing) ? Data.class_proportion(y, classes) : pY_S
         m_y = Data.class_counts(y, classes)
         empirical_ℓ_y = w_y .* empirical_classwise_risk(L, y_h, y, classes)
         ℓ_norm = norm(empirical_ℓ_y, Inf) 
@@ -96,7 +127,7 @@ struct NormedCertificate_1_Inf <: NormedCertification
                 0.0, fill(0.0, length(classes))
             end
         end
-        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, w_y, pac_bounds)
+        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, pY_S, w_y, pac_bounds)
     end  
 end
 
@@ -115,9 +146,12 @@ struct NormedCertificate_2_2 <: NormedCertification
     L::SupervisedLoss
     δ::Float64
     classes::Vector{Int64}
+    pY_S::Vector{Float64}
     w_y::Vector{Float64}
     pac_bounds::Bool
-    function NormedCertificate_2_2(L, y_h, y; δ=0.05, classes=sort(unique(y)), w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+    function NormedCertificate_2_2(L, y_h, y;
+        δ=0.05, classes=sort(unique(y)), pY_S=nothing, w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+        pY_S = (pY_S === nothing) ? Data.class_proportion(y, classes) : pY_S
         m_y = Data.class_counts(y, classes)
         empirical_ℓ_y = w_y .* empirical_classwise_risk(L, y_h, y, classes)
         ℓ_norm = norm(empirical_ℓ_y, 2) 
@@ -128,7 +162,7 @@ struct NormedCertificate_2_2 <: NormedCertification
                 0.0, fill(0.0, length(classes))
             end
         end
-        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, w_y, pac_bounds)
+        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, pY_S, w_y, pac_bounds)
     end  
 end
 
@@ -147,9 +181,12 @@ struct NormedCertificate_Inf_1 <: NormedCertification
     L::SupervisedLoss
     δ::Float64
     classes::Vector{Int64}
+    pY_S::Vector{Float64}
     w_y::Vector{Float64}
     pac_bounds::Bool
-    function NormedCertificate_Inf_1(L, y_h, y; δ=0.05, classes=sort(unique(y)), w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+    function NormedCertificate_Inf_1(L, y_h, y;
+        δ=0.05, classes=sort(unique(y)), pY_S=nothing, w_y=fill(1., length(unique(y))), pac_bounds=true, tol=1e-4, n_trials=3)
+        pY_S = (pY_S === nothing) ? Data.class_proportion(y, classes) : pY_S
         m_y = Data.class_counts(y, classes)
         empirical_ℓ_y = w_y .* empirical_classwise_risk(L, y_h, y, classes)
         ℓ_norm = norm(empirical_ℓ_y, 1) 
@@ -160,8 +197,48 @@ struct NormedCertificate_Inf_1 <: NormedCertification
                 0.0, fill(0.0, length(classes))
             end
         end
-        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, w_y, pac_bounds)
+        new(ℓ_norm + ϵ_bound, ℓ_norm, δ_y, empirical_ℓ_y, m_y, L, δ, classes, pY_S, w_y, pac_bounds)
     end  
+end
+
+function _optimize_signed_Δℓ(objective::Type{T}, L, pos_loss, neg_loss, m_pos, m_neg, δ;
+                             tol::Float64=1e-8, n_trials::Int=3) where {T<:Δℓ_Objective}
+    
+    classwise_loss = vcat(neg_loss, pos_loss)
+    m_y = vcat(m_neg, m_pos)
+    reorder = (pos_loss < neg_loss) ? true : false
+    if reorder 
+        classwise_loss = classwise_loss[[2, 1]]
+        m_y = m_y[[2, 1]]
+    end
+
+    args = [ L, classwise_loss, [1., 1.], m_y, δ, tol, false ]
+    Δℓ = [ _optimize_Δℓ(T, args...) for _ in 1:n_trials ]
+    best_Δℓ = Δℓ[argmin(objective_value.(Δℓ))]
+
+    onesided_bool = false
+    if (T !== Δℓ_MaxMin && (!is_feasible(best_Δℓ) || effective_δ(best_Δℓ)-tol > δ))
+        Δℓ = [ _optimize_Δℓ(onesided(T), args...) for _ in 1:n_trials ]
+        onesided_bool = true
+        best_Δℓ = Δℓ[argmin(objective_value.(Δℓ))]
+    end
+    
+    if reorder
+        best_Δℓ = typeof(best_Δℓ)(
+            best_Δℓ.ϵ_y[[2, 1]],
+            best_Δℓ.δ_y[[2, 1]],
+            best_Δℓ.empirical_ℓ_y[[2, 1]],
+            best_Δℓ.w_y[[2, 1]],
+            best_Δℓ.m_y[[2, 1]],
+            best_Δℓ.L
+        )
+    end
+
+    signed_loss = value(onesided_bool ? onesided(T) : T, best_Δℓ.ϵ_y, best_Δℓ.empirical_ℓ_y, best_Δℓ.w_y)
+    if reorder
+        signed_loss = -1 * signed_loss
+    end
+    signed_loss
 end
 
 function minimize_ℓ_norm_error(hoelder_conjugate, empirical_ℓ_y, m_y, δ; tol=1e-4, n_trials=3)
@@ -214,12 +291,34 @@ function _minimize_ℓ_norm_error(hoelder_conjugate, empirical_ℓ_y, m_y, δ; t
 end
 
 """
-    domaingap_error(c, Py_S, Py_T)
+    domaingap_error(c, pY_T)
 
 Prediction of the ACS-induced error by a given label shift.
 """
-function domaingap_error(c::NormedCertificate_1_Inf, Py_S, Py_T; pac_bounds=true, variant_plus=false)
-    d = Py_T .- Py_S
+function domaingap_error(c::SignedCertificate, pY_T)
+
+    # decompose into positive and negative loss
+    idx_pos = (pY_T .- c.pY_S) .>= 0.0
+    idx_neg = (pY_T .- c.pY_S) .< 0.0    
+    weighted_classwise_loss = c.w_y .* c.empirical_ℓ_y
+    loss_pos = sum((pY_T .- c.pY_S)[idx_pos] .* weighted_classwise_loss[idx_pos])
+    loss_neg = sum(abs.(pY_T .- c.pY_S)[idx_neg] .* weighted_classwise_loss[idx_neg])
+    m_pos = sum(c.m_y[idx_pos])
+    m_neg = sum(c.m_y) - m_pos
+
+    if c.pac_bounds
+        u = _optimize_signed_Δℓ(Δℓ_MinMax, c.L, loss_pos, loss_neg, m_pos, m_neg, c.δ)
+        l = _optimize_signed_Δℓ(Δℓ_MaxMin, c.L, loss_pos, loss_neg, m_pos, m_neg, c.δ)
+        bounds = sort(vcat(u,l))
+        return (bounds[1],bounds[2])
+    else
+        return loss_pos - loss_neg
+    end
+end
+
+function domaingap_error(c::NormedCertificate_1_Inf, pY_T; pac_bounds=nothing, variant_plus=false)
+    pac_bounds = (pac_bounds === nothing) ? c.pac_bounds : pac_bounds
+    d = pY_T .- c.pY_S
     if variant_plus
         d = max.(d, 0.0)
     end
@@ -231,8 +330,9 @@ function domaingap_error(c::NormedCertificate_1_Inf, Py_S, Py_T; pac_bounds=true
     end
 end
 
-function domaingap_error(c::NormedCertificate_2_2, Py_S, Py_T; pac_bounds=true, variant_plus=false)
-    d = Py_T .- Py_S
+function domaingap_error(c::NormedCertificate_2_2, pY_T; pac_bounds=nothing, variant_plus=false)
+    pac_bounds = (pac_bounds === nothing) ? c.pac_bounds : pac_bounds
+    d = pY_T .- c.pY_S
     if variant_plus
         d = max.(d, 0.0)
     end
@@ -244,8 +344,9 @@ function domaingap_error(c::NormedCertificate_2_2, Py_S, Py_T; pac_bounds=true, 
     end
 end
 
-function domaingap_error(c::NormedCertificate_Inf_1, Py_S, Py_T; pac_bounds=true, variant_plus=false)
-    d = Py_T .- Py_S
+function domaingap_error(c::NormedCertificate_Inf_1, pY_T; pac_bounds=nothing, variant_plus=false)
+    pac_bounds = (pac_bounds === nothing) ? c.pac_bounds : pac_bounds
+    d = pY_T .- c.pY_S
     if variant_plus
         d = max.(d, 0.0)
     end
@@ -257,8 +358,8 @@ function domaingap_error(c::NormedCertificate_Inf_1, Py_S, Py_T; pac_bounds=true
     end
 end
 
-function domaingap_error(method_name, ℓNormBounded, Py_S, Py_T; variant_plus=false)
-    d = Py_T .- Py_S
+function domaingap_error(method_name, ℓNormBounded, pY_S, pY_T; variant_plus=false)
+    d = pY_T .- pY_S
     if variant_plus
         d = max.(d, 0.0)
     end
@@ -331,7 +432,7 @@ function Base.show(io::IO, ::MIME"text/plain", c::NormedCertificate_Inf_1)
         round.(c.empirical_ℓ_y; digits=6))
     println(io, "  │ * w_y = ", round.(c.w_y; digits=6))
     println(io, "  │ * m_y = ", c.m_y)
-    println(io, "  │ * p_s = ", round.(c.m_y ./ sum(c.m_y); digits=4))
+    println(io, "  │ * pY_S = ", round.(c.m_y ./ sum(c.m_y); digits=4))
     println(io, "  └ * L = ", c.L)
 end 
 
@@ -352,7 +453,7 @@ function Base.show(io::IO, ::MIME"text/plain", c::NormedCertification)
         round.(c.empirical_ℓ_y; digits=6))
     println(io, "  │ * w_y = ", round.(c.w_y; digits=6))
     println(io, "  │ * m_y = ", c.m_y)
-    println(io, "  │ * p_s = ", round.(c.m_y ./ sum(c.m_y); digits=4))
+    println(io, "  │ * pY_S = ", round.(c.m_y ./ sum(c.m_y); digits=4))
     println(io, "  └ * L = ", c.L)
 end 
 
