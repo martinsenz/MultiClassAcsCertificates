@@ -9,7 +9,7 @@ using AcsCertificates.Certificates: Δℓ_MaxMin, OneSided_Δℓ_MinMax, Δℓ_M
 export domaingap_error, empirical_classwise_risk, NormedCertificate, p_range, _ϵ
 
 # one-sided maximum error with probability at least 1-δ
-_ϵ(m::Int, δ::Float64) = sqrt(-log(δ) / (2*m))
+_ϵ(m, δ) = sqrt(-log(δ) / (2*m))
 _δ(m, ϵ) = exp(-2 * m * ϵ^2)
 
 """

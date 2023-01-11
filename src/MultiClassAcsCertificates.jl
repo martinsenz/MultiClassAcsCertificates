@@ -35,6 +35,9 @@ using .Plots
 include("Certification.jl")
 using .Certification
 
+include("Strategy.jl")
+using .Strategy
+
 include("Experiments.jl")
 using .Experiments
 
