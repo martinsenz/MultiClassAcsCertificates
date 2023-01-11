@@ -20,16 +20,16 @@ end
 
 function ∇ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
             class_prior_distribution::Distributions.MultivariateDistribution,
-            ;n_points=10000)
+            ;n_points=10000, seed=123)
 
     starting_point = sum(c.m_y) .* c.pY_S
-    -ForwardDiff.gradient(m -> ϵ(c, class_prior_distribution, m; n_points=n_points), starting_point)
+    -ForwardDiff.gradient(m -> ϵ(c, class_prior_distribution, m; n_points=n_points, seed=seed), starting_point)
 end
 
 function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
         class_prior_distribution::Distributions.MultivariateDistribution,
         m,
-        ;n_points=10000)
+        ;n_points=10000, seed=123)
  
     _ps(m) = m ./ sum(m)
     _deviation_norm(c::NormedCertificate_Inf_1, x::Vector{Float64}) = norm(_ps(m) .- x, Inf)
@@ -39,7 +39,8 @@ function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf},
     naive_montecarlointegration(
         p -> Distributions.pdf(class_prior_distribution, p) * _deviation_norm(c, p) * ℓNorm(c, m),
         n_points,
-        length(c.classes))
+        length(c.classes);
+        seed=seed)
 end
 
 function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
@@ -76,6 +77,26 @@ function naive_montecarlointegration(f::Function, N::Int64, n_classes::Int64; se
     end
     V = 1 / factorial(n_classes-1)
     V * (1 / N) * f_sum 
+end
+
+function suggest_acquisition(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf},
+                            class_prior_distribution::Distributions.MultivariateDistribution, 
+                            batchsize::Int64;
+                            n_samples_mc::Int64=1000, seed=123)
+
+    gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, )
+    if all(g -> g < 0.0, gradient) 
+        gradient = mean(class_prior_distribution) .* (sum(c.m_y) + batchsize)
+    end
+    acquisition = round.(Int64, max.(0.0, gradient) .* batchsize / sum(gradient[gradient.>0]))
+    d = sum(acquisition) - batchsize
+    sample_idx_diff = StatsBase.sample(c.classes, StatsBase.Weights(mean(class_prior_distribution)), d)
+    if d < 0.0
+        acquisition .+= value(sort(countmap(sample_idx_diff)))
+    elseif d > 0.0
+        acquisition .-= value(sort(countmap(sample_idx_diff)))
+    end
+    acquisition
 end
 
 end
