@@ -1,5 +1,5 @@
 module Strategy
-using ..Certification: NormedCertificate_Inf_1, NormedCertificate_2_2, NormedCertificate_1_Inf, _ϵ
+using ..Certification: NormedCertificate_Inf_1, NormedCertificate_2_2, NormedCertificate_1_Inf, _ϵ, NormedCertification
 using Random
 using StatsBase
 using Distributions
@@ -11,14 +11,30 @@ using ForwardDiff
 
 
 function ℓNorm(c::NormedCertificate_Inf_1, m)
-    sum(c.empirical_ℓ_y) + sum(map(i -> _ϵ(m[i], c.δ_y[i]), 1:length(m)))
+    if c.pac_bounds
+        sum(c.empirical_ℓ_y) + sum(map(i -> _ϵ(m[i], c.δ_y[i]), 1:length(m)))
+    else
+        norm(c.empirical_ℓ_y, 1)
+    end
+end
+
+function ℓNorm(c::NormedCertificate_2_2, m)
+    if c.pac_bounds
+        sqrt(sum(map(i -> (c.empirical_ℓ_y[i] + _ϵ(m[i], c.δ_y[i]))^2, 1:length(m))))
+    else
+        norm(c.empirical_ℓ_y, 2)
+    end
 end
 
 function ℓNorm(c::NormedCertificate_1_Inf, m)
-    maximum(c.empirical_ℓ_y .+ map(i -> _ϵ(m[i], c.δ_y[i]), 1:length(m)))
+    if c.pac_bounds
+        maximum(c.empirical_ℓ_y .+ map(i -> _ϵ(m[i], c.δ_y[i]), 1:length(m)))
+    else
+        norm(c.empirical_ℓ_y, Inf)
+    end
 end
 
-function ∇ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
+function ∇ϵ(c::NormedCertification, 
             class_prior_distribution::Distributions.MultivariateDistribution,
             ;n_points=10000, seed=123)
 
@@ -26,13 +42,14 @@ function ∇ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf},
     -ForwardDiff.gradient(m -> ϵ(c, class_prior_distribution, m; n_points=n_points, seed=seed), starting_point)
 end
 
-function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
+function ϵ(c::NormedCertification, 
         class_prior_distribution::Distributions.MultivariateDistribution,
         m,
         ;n_points=10000, seed=123)
  
     _ps(m) = m ./ sum(m)
     _deviation_norm(c::NormedCertificate_Inf_1, x::Vector{Float64}) = norm(_ps(m) .- x, Inf)
+    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(_ps(m) .- x, 2)
     _deviation_norm(c::NormedCertificate_1_Inf, x::Vector{Float64}) = norm(_ps(m) .- x, 1)
     
     # integration of ∫f(m)
@@ -43,12 +60,13 @@ function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf},
         seed=seed)
 end
 
-function ϵ(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf}, 
+function ϵ(c::NormedCertification, 
         class_prior_distribution::Distributions.MultivariateDistribution,
         m::Vector{Int64}; n_points=10000)
 
     _ps(m) = m ./ sum(m)
     _deviation_norm(c::NormedCertificate_Inf_1, x::Vector{Float64}) = norm(_ps(m) .- x, Inf)
+    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(_ps(m) .- x, 2)
     _deviation_norm(c::NormedCertificate_1_Inf, x::Vector{Float64}) = norm(_ps(m) .- x, 1)
     
     # integration of ∫f(m)
@@ -79,13 +97,14 @@ function naive_montecarlointegration(f::Function, N::Int64, n_classes::Int64; se
     V * (1 / N) * f_sum 
 end
 
-function suggest_acquisition(c::Union{NormedCertificate_Inf_1, NormedCertificate_1_Inf},
+function suggest_acquisition(c::NormedCertification,
                             class_prior_distribution::Distributions.MultivariateDistribution, 
                             batchsize::Int64;
                             n_samples_mc::Int64=1000, seed=123)
 
     gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, )
     if all(g -> g < 0.0, gradient) 
+        @warn "Determined gradient $(gradient) is negative!"
         gradient = mean(class_prior_distribution) .* (sum(c.m_y) + batchsize)
     end
     acquisition = round.(Int64, max.(0.0, gradient) .* batchsize / sum(gradient[gradient.>0]))
