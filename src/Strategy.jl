@@ -4,8 +4,6 @@ using Random
 using StatsBase
 using Distributions
 using ScikitLearn
-using FiniteDifferences
-using SimplexQuad
 using LinearAlgebra
 using ForwardDiff
 
