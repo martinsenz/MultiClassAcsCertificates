@@ -1,0 +1,68 @@
+
+job: acquisition
+
+writepath: "res/experiments/acquisition.csv"
+
+data:
+  - optdigits
+  - satimage
+  - pendigits
+  - eyemovements
+  - bng
+  - shuttle
+  #- connect4
+  #- waveform_5000
+  #- cmc
+  - dna
+  - wall_robot_navigation
+  - bng_vehicle
+  - jannis
+  - nursery
+  - dilbert
+  - har
+  - first_order_theorem_proving
+  - wine_quality_white
+
+
+strategy:
+  - random
+  - uniform
+  - inverse # Lomasky et al: utility ∝ 1 / class-wise accuracy
+  - improvement # Lomasky et al: utility ∝ improvement in class-wise accuracy
+  - redistriction # Lomasky et al: utility ∝ number of samples for which the prediction changes
+  - proportional # Lomasky et al: utility ∝ pY_tst
+  - proportional_estimate 
+  - domaingap_1Inf # |d|_1 * |l_h|_Inf
+  - domaingap_22 # |d|_2 * |l_h|_2
+  - domaingap_Inf1 # d|_Inf * |l_h|_1
+  - domaingap_1Inf_empirical 
+  - domaingap_22_empirical
+  - domaingap_Inf1_empirical
+
+initital_trainingssize: 30
+batchsize: 50
+n_batches: 10
+pY_T: [0.7, 0.2, 0.1]
+
+estimate_pY_T:
+  - [[0.7, 0.2, 0.1], 0.1] # A
+  - [[0.9, 0.05, 0.05], 0.1] # B 
+  - [[0.8, 0.1, 0.1], 0.1] # C
+  - [[0.6, 0.3, 0.1], 0.1] # D
+
+clf:
+  - sklearn.linear_model.LogisticRegression
+  # - sklearn.tree.DecisionTreeClassifier
+
+loss:
+  - ZeroOneLoss
+
+epsilon:
+  - 0.05
+
+delta:
+  - 0.05
+
+rskf:
+  n_repeats: 5 # yields 15 repetitions due to n_splits=3
+  random_state: 123

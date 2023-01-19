@@ -13,7 +13,7 @@ _ϵ(m, δ) = sqrt(-log(δ) / (2*m))
 _δ(m, ϵ) = exp(-2 * m * ϵ^2)
 
 """
-    empirical_classwise_risk(L, y_h, y)
+    empirical_classwise_risk(L, y_h, y, classes)
 The class-wise risk of predictions `y_h` under the loss function `L`.
 """
 function empirical_classwise_risk(L, y_h, y, classes) 

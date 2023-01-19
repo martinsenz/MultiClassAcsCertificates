@@ -61,6 +61,10 @@ function tightness(config_path="conf/exp/tightness.yml", standalone=true, full_t
     Plots.tightness(standalone, full_table)
 end
 
+function acquisition(config_path="conf/exp/acquisition.yml")
+    Experiments.acquisition(config_path)
+end
+
 """
     run_all_experiments()
 

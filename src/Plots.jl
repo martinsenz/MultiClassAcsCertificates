@@ -4,6 +4,9 @@ using CSV, DataFrames, Statistics, PyCall, Distances, StatsBase
 using LaTeXStrings
 using TikzPictures
 using PGFPlots
+using Random
+using Distributions
+using CriticalDifferenceDiagrams
 
 function __init__()
     py"""
@@ -49,6 +52,8 @@ ternary = pyimport("ternary")
 simplex_iterator = pyimport("ternary.helpers").simplex_iterator
 NearestNDInterpolator= pyimport("scipy.interpolate").NearestNDInterpolator
 
+_to_point(p::Vector{Float64}) = tuple(round.(Int64, p .* 100)...)
+
 function _write_header(io)
     println(io, "\\documentclass[]{article}")
     println(io, "\\usepackage[T1]{fontenc}")
@@ -62,25 +67,8 @@ function _write_header(io)
     println(io, "\\usepackage{float}")
 end
 
-function _strategy_names(name)
-    if name == "NormedCertificate_Inf_1"
-        "\$ \\lVert \\mathbf{d} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
-    elseif name == "NormedCertificatePlus_Inf_1"
-        "\$ \\lVert \\mathbf{d}_{+} \\rVert_{\\infty} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{1} \$"
-    elseif name == "NormedCertificate_2_2"
-        "\$ \\lVert \\mathbf{d} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
-    elseif name == "NormedCertificatePlus_2_2"
-        "\$ \\lVert \\mathbf{d}_{+} \\rVert_{2} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{2} \$"
-    elseif name == "NormedCertificate_1_Inf"
-        "\$ \\lVert \\mathbf{d} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
-    elseif name == "NormedCertificatePlus_1_Inf"
-        "\$ \\lVert \\mathbf{d}_{+} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
-    else
-        @error("Method name $(name) not recognized!")
-    end
-end
-
 include("plt/tightness.jl")
 include("plt/certify.jl")
+include("plt/acquisition.jl")
 
 end

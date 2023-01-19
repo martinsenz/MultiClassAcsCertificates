@@ -9,7 +9,6 @@ using SimplexQuad
 using LinearAlgebra
 using ForwardDiff
 
-
 function ℓNorm(c::NormedCertificate_Inf_1, m)
     if c.pac_bounds
         sum(c.empirical_ℓ_y) + sum(map(i -> _ϵ(m[i], c.δ_y[i]), 1:length(m)))
@@ -76,17 +75,6 @@ function ϵ(c::NormedCertification,
         length(c.classes))
 end
 
-function estimate_dirichlet_distribution(d; n_samples=1000, verbose=false)
-    X = max.(0.01, rand(d, n_samples))
-    w = map(x -> Distributions.pdf(d,x), eachrow(transpose(X)))
-    dirichlet = Distributions.fit_mle(Distributions.Dirichlet, X ./ sum(X, dims=1), w)
-    if verbose
-        @info "Distribution d: mean(d)=$(mean(d)), var(d)=$(var(d)) \n 
-        Dirichlet fitting => mean=$(round.(mean(dirichlet);digits=4)), var=$( round.( var(dirichlet); digits=4 ) )"
-    end
-    dirichlet
-end
-
 function naive_montecarlointegration(f::Function, N::Int64, n_classes::Int64; seed=1234)
     random_points = transpose(rand(MersenneTwister(seed), Distributions.Dirichlet(ones(n_classes)), N))
     f_sum = 0.0 
@@ -100,20 +88,22 @@ end
 function suggest_acquisition(c::NormedCertification,
                             class_prior_distribution::Distributions.MultivariateDistribution, 
                             batchsize::Int64;
-                            n_samples_mc::Int64=1000, seed=123)
+                            n_samples_mc::Int64=10000, threshold=0.0, seed=123, warn=false)
 
-    gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, )
-    if all(g -> g < 0.0, gradient) 
-        @warn "Determined gradient $(gradient) is negative!"
+    gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, seed=seed)
+    if all(g -> g <= threshold, gradient) 
+        if warn
+            @warn "Determined gradient $(gradient) is negative!"
+        end
         gradient = mean(class_prior_distribution) .* (sum(c.m_y) + batchsize)
     end
     acquisition = round.(Int64, max.(0.0, gradient) .* batchsize / sum(gradient[gradient.>0]))
-    d = sum(acquisition) - batchsize
+    d = abs(sum(acquisition) - batchsize)
     sample_idx_diff = StatsBase.sample(c.classes, StatsBase.Weights(mean(class_prior_distribution)), d)
     if d < 0.0
-        acquisition .+= value(sort(countmap(sample_idx_diff)))
+        acquisition .+= values(sort(countmap(sample_idx_diff)))
     elseif d > 0.0
-        acquisition .-= value(sort(countmap(sample_idx_diff)))
+        acquisition .-= values(sort(countmap(sample_idx_diff)))
     end
     acquisition
 end

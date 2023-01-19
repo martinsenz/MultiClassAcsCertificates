@@ -2,6 +2,7 @@ module Experiments
 using
     ..MultiClassAcsCertificates,
     ..MultiClassAcsCertificates.Certification,
+    ..MultiClassAcsCertificates.Strategy,
     Distributions,
     MetaConfigurations,
     Random,
@@ -29,5 +30,6 @@ end
 
 include("exp/tightness.jl")
 include("exp/certify.jl")
+include("exp/acquisition.jl")
 
 end
