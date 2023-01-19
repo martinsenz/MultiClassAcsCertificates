@@ -153,11 +153,12 @@ function _m_d(L, y_h, y, config)
         return utility
     elseif occursin("domaingap", config["strategy"])
         pac_bounds = !contains(config["strategy"], "empirical")
+        plus = contains(config["strategy"], "plus")
         conjugate = _extract_hoelder_conjugate(config["strategy"])
         c = Certification.NormedCertificate(L, y_h, y; hoelder_conjugate=conjugate, pac_bounds=pac_bounds)
         cov_matrix = Matrix(config["estimate_pY_T"][2]*I,3,3)
         class_prior_distribution = Distributions.MvNormal(config["estimate_pY_T"][1], cov_matrix)
-        Strategy.suggest_acquisition(c, class_prior_distribution, config["batchsize"])
+        Strategy.suggest_acquisition(c, class_prior_distribution, config["batchsize"]; plus=plus)
     else
         throw(ValueError("Unknown strategy \"$strategy\""))
     end

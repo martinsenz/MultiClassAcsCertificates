@@ -14,7 +14,13 @@ _strategy_names = Dict([
     ("domaingap_Inf1", L"$\lVert \mathbf{d} \rVert_{\infty} \cdot \lVert \boldsymbol{\ell}_{h} \rVert_{1}^{*}$"),
     ("domaingap_1Inf_empirical", L"$\lVert \mathbf{d} \rVert_{1} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{\infty}$"),
     ("domaingap_22_empirical", L"$\lVert \mathbf{d} \rVert_{2} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{2}$"),
-    ("domaingap_Inf1_empirical", L"$\lVert \mathbf{d} \rVert_{\infty} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{1}$")
+    ("domaingap_Inf1_empirical", L"$\lVert \mathbf{d} \rVert_{\infty} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{1}$"),
+    ("domaingap_1Inf_plus", L"$\lVert \mathbf{d}_{+} \rVert_{1} \cdot \lVert \boldsymbol{\ell}_{h} \rVert_{\infty}^{*}$"),
+    ("domaingap_22_plus", L"$\lVert \mathbf{d}_{+} \rVert_{2} \cdot \lVert \boldsymbol{\ell}_{h} \rVert_{2}^{*}$"),
+    ("domaingap_Inf1_plus", L"$\lVert \mathbf{d}_{+} \rVert_{\infty} \cdot \lVert \boldsymbol{\ell}_{h} \rVert_{1}^{*}$"),
+    ("domaingap_1Inf_empirical_plus", L"$\lVert \mathbf{d}_{+} \rVert_{1} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{\infty}$"),
+    ("domaingap_22_empirical_plus", L"$\lVert \mathbf{d}_{+} \rVert_{2} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{2}$"),
+    ("domaingap_Inf1_empirical_plus", L"$\lVert \mathbf{d}_{+} \rVert_{\infty} \cdot \hat{\lVert \boldsymbol{\ell}_{h} \rVert}_{1}$")
 ])
 
 _pY_estimate = Dict([

@@ -38,6 +38,13 @@ strategy:
   - domaingap_1Inf_empirical 
   - domaingap_22_empirical
   - domaingap_Inf1_empirical
+  - domaingap_1Inf_plus 
+  - domaingap_22_plus 
+  - domaingap_Inf1_plus 
+  - domaingap_1Inf_empirical_plus 
+  - domaingap_22_empirical_plus
+  - domaingap_Inf1_empirical_plus
+
 
 initital_trainingssize: 30
 batchsize: 50
