@@ -46,7 +46,7 @@ function ϵ(c::NormedCertification,
  
     _ps(m) = m ./ sum(m)
     _deviation_norm(c::NormedCertificate_Inf_1, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, Inf)
-    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(plus ? max.(_ps(m) .- x) : _ps(m) .- x, 2)
+    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, 2)
     _deviation_norm(c::NormedCertificate_1_Inf, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, 1)
     
     # integration of ∫f(m)
@@ -63,7 +63,7 @@ function ϵ(c::NormedCertification,
 
     _ps(m) = m ./ sum(m)
     _deviation_norm(c::NormedCertificate_Inf_1, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, Inf)
-    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(plus ? max.(_ps(m) .- x) : _ps(m) .- x, 2)
+    _deviation_norm(c::NormedCertificate_2_2, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, 2)
     _deviation_norm(c::NormedCertificate_1_Inf, x::Vector{Float64}) = norm(plus ? max.(0.0, _ps(m) .- x) : _ps(m) .- x, 1)
     
     # integration of ∫f(m)
@@ -86,7 +86,7 @@ end
 function suggest_acquisition(c::NormedCertification,
                             class_prior_distribution::Distributions.MultivariateDistribution, 
                             batchsize::Int64;
-                            n_samples_mc::Int64=10000, plus=false, threshold=0.000000001, seed=123, warn=false)
+                            n_samples_mc::Int64=10000, plus=false, threshold=0.0, seed=123, warn=false)
 
     gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, plus=plus, seed=seed)
     if all(g -> g <= threshold, gradient) 
