@@ -16,8 +16,8 @@ uuid = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 version = "0.4.4"
 
 [[deps.AcsCertificates]]
-deps = ["CSV", "CategoricalArrays", "CriticalDifferenceDiagrams", "DataFrames", "Distances", "Distributed", "Distributions", "HDF5", "HypothesisTests", "JuMP", "LinearAlgebra", "LossFunctions", "MetaConfigurations", "NLopt", "OnlineStats", "Optim", "PGFPlots", "Pandas", "Printf", "ProgressMeter", "PyCall", "Query", "RDatasets", "Random", "Revise", "ScikitLearn", "SpecialFunctions", "StatsBase", "Tables", "TikzPictures"]
-git-tree-sha1 = "873caa4e59cae48cdc74ea1109c1c15dbcf64843"
+deps = ["CSV", "CategoricalArrays", "Conda", "CriticalDifferenceDiagrams", "DataFrames", "Distances", "Distributed", "Distributions", "HDF5", "HypothesisTests", "JuMP", "LinearAlgebra", "LossFunctions", "MetaConfigurations", "NLopt", "OnlineStats", "Optim", "PGFPlots", "Pandas", "Printf", "ProgressMeter", "PyCall", "Query", "RDatasets", "Random", "Revise", "ScikitLearn", "SpecialFunctions", "StatsBase", "Tables", "TikzPictures"]
+git-tree-sha1 = "439ce78dba266e109d1b88a7c0019818f5e55fb1"
 repo-rev = "main"
 repo-url = "https://github.com/mirkobunse/AcsCertificates.jl.git"
 uuid = "d482e0aa-54fd-4c7a-a598-2099f2703f7f"
