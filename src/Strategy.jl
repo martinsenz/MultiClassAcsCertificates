@@ -86,7 +86,7 @@ end
 function suggest_acquisition(c::NormedCertification,
                             class_prior_distribution::Distributions.MultivariateDistribution, 
                             batchsize::Int64;
-                            n_samples_mc::Int64=10000, plus=false, threshold=0.0, seed=123, warn=false)
+                            n_samples_mc::Int64=10000, plus=false, threshold=0.000000001, seed=123, warn=false)
 
     gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, plus=plus, seed=seed)
     if all(g -> g <= threshold, gradient) 
