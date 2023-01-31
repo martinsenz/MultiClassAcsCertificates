@@ -89,9 +89,9 @@ function suggest_acquisition(c::NormedCertification,
                             n_samples_mc::Int64=10000, plus=false, threshold=0.0, seed=123, warn=false)
 
     gradient = ∇ϵ(c, class_prior_distribution; n_points=n_samples_mc, plus=plus, seed=seed)
-    if all(g -> g <= threshold, gradient) 
+    if all(g -> g <= threshold, gradient) || any(g -> isnan(g) || isinf(g), gradient)
         if warn
-            @warn "Determined gradient $(gradient) is negative!"
+            @warn "Determined gradient $(gradient) is invalid. Using fallback strategy."
         end
         gradient = mean(class_prior_distribution) .* (sum(c.m_y) + batchsize)
     end
