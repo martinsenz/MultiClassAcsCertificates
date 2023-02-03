@@ -4,16 +4,24 @@ function acquisition(config_path="conf/exp/acquisition.yml")
     results_path = config["writepath"]
     config["rskf"]["n_splits"] = 3 
     config["sample_size_multiplier"] = config["rskf"]["n_splits"]
-    experiments = expand(config, "data", "strategy", "estimate_pY_T", "clf", "loss", "delta", "epsilon")
+    experiments = expand(config, "data", "strategy", "estimate_pY_T", "clf", "loss", "delta")
+
     for exp in experiments
-        if !(startswith(exp["strategy"], "domaingap") || exp["strategy"] == "proportional_estimate")
+        if !(contains(exp["strategy"], "domaingap") || exp["strategy"] == "proportional_estimate")
             exp["estimate_pY_T"] = nothing
+        end
+        if exp["strategy"] == "proportional_estimate"
+            exp["estimate_pY_T"] = (exp["estimate_pY_T"][1][1:1], exp["estimate_pY_T"][2][1]) # no variance 
+        end
+        exp["name"] = exp["strategy"]
+        if contains(exp["strategy"], "domaingap") || exp["strategy"] == "proportional_estimate"
+            exp["name"] = exp["name"] * "_" * exp["estimate_pY_T"][1]
         end
     end
     unique!(experiments)
     @info "There are $(length(experiments)) combinations."
     for (i, exp) in enumerate(experiments)
-        exp["info"] = "Trial $(i): $(exp["strategy"]) with pY_T_estimate=$(exp["estimate_pY_T"]), classifier=$(exp["clf"]) on dataset=$(exp["data"]))"
+        exp["info"] = "Trial $(i): $(exp["name"]), classifier=$(exp["clf"]) on dataset=$(exp["data"]))"
     end
     df = vcat(pmap(exp -> _acquisition(exp), experiments)...)
     @info "Writing results" results_path
@@ -23,7 +31,6 @@ end
 
 function _acquisition(config)
     @info "$(config["info"])"
-
     rskf = SkObject("sklearn.model_selection.RepeatedStratifiedKFold", config["rskf"])
     Random.seed!(config["rskf"]["random_state"])
 
@@ -40,6 +47,7 @@ function _acquisition(config)
 
     df = DataFrame(
         i_rskf   = Int[], # iteration of the rskf
+        name = String[], # strategy name
         batch    = Int[], # number of the ACS acquisition batch
         N_1    = Int[], # number of class 1 training set instances
         N_2    = Int[], # number of class 2 training set instances
@@ -79,7 +87,7 @@ function _acquisition(config)
 
             # 2) store an log information ...
             pY_trn = Data.class_proportion(y_trn[i_trn], classes)
-            push!(df, [i_rskf, batch, m_trn[1], m_trn[2],m_trn[3], pY_trn, L_tst])
+            push!(df, [i_rskf, config["name"], batch, m_trn[1], m_trn[2],m_trn[3], pY_trn, L_tst])
 
             # 3) acquire new data
             if batch < config["n_batches"]
@@ -105,7 +113,7 @@ function _acquisition(config)
             end
         end
     end
-    for column in [ "data", "strategy", "clf", "pY_T", "estimate_pY_T", "loss", "delta", "epsilon" ]
+    for column in [ "data", "clf", "pY_T", "estimate_pY_T", "loss", "delta" ]
         df[!, column] .= string(config[column])
     end
     return df
@@ -123,9 +131,7 @@ function _m_d(L, y_h, y, config)
         m_d = p_d .* (length(y) + config["batchsize"])
         return m_d - Data.class_counts(y, [1,2,3])
     elseif config["strategy"] == "proportional_estimate"
-        cov_matrix = Matrix(config["estimate_pY_T"][2]*I,3,3)
-        class_prior_distribution = Distributions.MvNormal(config["estimate_pY_T"][1], cov_matrix)
-        m_d = mean(class_prior_distribution) .* (length(y) + config["batchsize"])
+        m_d = config["estimate_pY_T"][2].* (length(y) + config["batchsize"])
         return m_d - Data.class_counts(y, [1,2,3])
     elseif config["strategy"] == "inverse"
         empirical_ℓ_y = min.(1-1e-4, max.(1e-4, empirical_classwise_risk(L, y_h, y, [1,2,3])))
@@ -155,9 +161,9 @@ function _m_d(L, y_h, y, config)
         pac_bounds = !contains(config["strategy"], "empirical")
         plus = contains(config["strategy"], "plus")
         conjugate = _extract_hoelder_conjugate(config["strategy"])
-        c = Certification.NormedCertificate(L, y_h, y; hoelder_conjugate=conjugate, pac_bounds=pac_bounds)
-        cov_matrix = Matrix(config["estimate_pY_T"][2]*I,3,3)
-        class_prior_distribution = Distributions.MvNormal(config["estimate_pY_T"][1], cov_matrix)
+        c = Certification.NormedCertificate(L, y_h, y; hoelder_conjugate=conjugate, pac_bounds=pac_bounds, n_trials=3, delta=config["delta"])
+        cov_matrix = Matrix(config["estimate_pY_T"][2][2]*I,3,3)
+        class_prior_distribution = Distributions.MvNormal(config["estimate_pY_T"][2][1], cov_matrix)
         Strategy.suggest_acquisition(c, class_prior_distribution, config["batchsize"]; plus=plus)
     else
         throw(ValueError("Unknown strategy \"$strategy\""))
@@ -203,7 +209,6 @@ function _acquire(i_trn, y_trn, m_s)
     return vcat(i_trn, i_acq)
 end
 
-
 function _extract_hoelder_conjugate(name::String)
     if contains(name, "1Inf")
         "1_Inf"
@@ -215,5 +220,4 @@ function _extract_hoelder_conjugate(name::String)
         @error("Hoelder conjugate not recognized!. Check the strategy name!")
     end
     
-     
 end

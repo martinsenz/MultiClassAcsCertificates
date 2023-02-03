@@ -33,6 +33,9 @@ pendigits:
     - [8,9]
     - [10]
 
+waveform_5000:
+  id: 60
+
 # https://www.openml.org/search?type=data&status=active&id=271&sort=runs
 bng:
   id: 271

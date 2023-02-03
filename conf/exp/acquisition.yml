@@ -10,9 +10,8 @@ data:
   - eyemovements
   - bng
   - shuttle
-  #- connect4
-  #- waveform_5000
-  #- cmc
+  - connect4
+  - waveform_5000
   - dna
   - wall_robot_navigation
   - bng_vehicle
@@ -23,7 +22,6 @@ data:
   - first_order_theorem_proving
   - wine_quality_white
 
-
 strategy:
   - random
   - uniform
@@ -31,44 +29,44 @@ strategy:
   - improvement # Lomasky et al: utility ∝ improvement in class-wise accuracy
   - redistriction # Lomasky et al: utility ∝ number of samples for which the prediction changes
   - proportional # Lomasky et al: utility ∝ pY_tst
-  - proportional_estimate 
-  - domaingap_1Inf # |d|_1 * |l_h|_Inf
-  - domaingap_22 # |d|_2 * |l_h|_2
-  - domaingap_Inf1 # d|_Inf * |l_h|_1
+  - proportional_estimate
+  - domaingap_1Inf 
+  - domaingap_22
+  - domaingap_Inf1
   - domaingap_1Inf_empirical 
   - domaingap_22_empirical
   - domaingap_Inf1_empirical
-  - domaingap_1Inf_plus 
-  - domaingap_22_plus 
-  - domaingap_Inf1_plus 
-  - domaingap_1Inf_empirical_plus 
-  - domaingap_22_empirical_plus
-  - domaingap_Inf1_empirical_plus
 
-
-initital_trainingssize: 30
-batchsize: 50
+initital_trainingssize: 60
+batchsize: 30
 n_batches: 10
 pY_T: [0.7, 0.2, 0.1]
 
 estimate_pY_T:
-  - [[0.7, 0.2, 0.1], 0.1] # A
-  - [[0.9, 0.05, 0.05], 0.1] # B 
-  - [[0.8, 0.1, 0.1], 0.1] # C
-  - [[0.6, 0.3, 0.1], 0.1] # D
-  - [[0.5, 0.3, 0.2], 0.1] # E
-  - [[0.5, 0.2, 0.3], 0.1] # F
-  - [[0.4, 0.3, 0.3], 0.1] # G
+  A_low:
+    - [0.7, 0.2, 0.1] # expected value
+    - 0.01 # variance
+  A_high: 
+    - [0.7, 0.2, 0.1]
+    - 0.1 
+  B_low: 
+    - [0.8, 0.1, 0.1]
+    - 0.01 
+  B_high: 
+    - [0.8, 0.1, 0.1]
+    - 0.1
+  C_low: 
+    - [0.6, 0.3, 0.1]
+    -  0.01
+  C_high: 
+    - [0.6, 0.3, 0.1]
+    - 0.1
 
 clf:
   - sklearn.linear_model.LogisticRegression
-  # - sklearn.tree.DecisionTreeClassifier
 
 loss:
   - ZeroOneLoss
-
-epsilon:
-  - 0.05
 
 delta:
   - 0.05
