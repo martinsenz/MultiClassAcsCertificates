@@ -10,25 +10,27 @@ function acquisition(filename::String, strategy_selection::Vector{String}; df_pa
     df[!, "kl_prop"] = map(i -> Distances.kl_divergence(df[!, "pY_trn"][i], df[!, "pY_T"][i] ), 1:nrow(df))
     count_strategies = length(unique(df[!, "name"]))
     @info "There were identified $(count_strategies) strategy configurations" 
-    
+
     # average test error over all CV repetitions
     gid = ["batch", "clf", "loss", "delta"]
     df = combine(
         groupby(df, vcat(gid, ["name", "pY_T", "data"])),
         "L_tst" => StatsBase.mean => "L_tst",
         "kl_unif" => StatsBase.mean => "kl_unif",
-        "kl_prop" => StatsBase.mean => "kl_prop"
+        "kl_prop" => StatsBase.mean => "kl_prop",
+        "pY_trn" => x -> mean(x,dims=1)
     )
     
-    cnt = filter(
-        "nrow" => x -> x .== length(unique(df[!, "name"])),
-        combine(groupby(df, ["data", "batch", "pY_T"]), nrow)
-    )
-    df = semijoin(df, cnt, on=["data", "batch", "pY_T"])
+    # cnt = filter(
+    #     "nrow" => x -> x .== length(unique(df[!, "name"])),
+    #     combine(groupby(df, ["data", "batch", "pY_T"]), nrow)
+    # )
+    # df = semijoin(df, cnt, on=["data", "batch", "pY_T"])
     df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
 
-    outputpath = base_output_dir * filename
-    mkdir(outputpath)
+    outputpath = base_output_dir * "tex"
+
+    return _plot_trenary_class_proportions(df, base_output_dir * filename * ".png")
     _plot_critical_diagram(df, outputpath * "/" * filename * "_CD.tex", count_strategies; gid=gid, standalone=standalone)
     _plot_kl_diagram(df, outputpath * "/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
 
@@ -69,10 +71,9 @@ function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch",
         "clip=false",
         "legend style={draw=none,fill=none,at={(1.1,.5)},anchor=west,row sep=.25em}",
         "x dir=reverse",
-        "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*}}",
+        "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*},{gray, mark=diamond*}}",
         "width=\\axisdefaultwidth, height=\\axisdefaultheight"
     ], ", ")
-
 
     PGFPlots.resetPGFPlotsPreamble()
     PGFPlots.pushPGFPlotsPreamble(join([
@@ -131,92 +132,127 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
     PGFPlots.save(output_path, plot)
 end
 
+function _plot_trenary_class_proportions(df, output_path; number_batch=10)
+    df_agg = combine(groupby(df, ["name", "batch"]), "pY_trn_function" => x -> mean(x,dims=1))
+    scale = 100
+    figure, tax = Plots.ternary.figure(scale=scale)
+    figure.suptitle("Title", fontsize=20)
+    figure.set_size_inches(10, 10)
+    tax.boundary(linewidth=3.0)
+    tax.gridlines(multiple=scale/10, color="black")
+    fontsize = 17
+    cb_kwargs = Dict(Dict(:use_gridspec => false, :location => "bottom", :pad => -0.03))
+
+    tax.scatter([_to_point([0.3333,0.3333,0.3333])], marker="D", label="Initial", color="blue", zorder=5)
+    tax.scatter([_to_point([0.7,0.2,0.1])], marker="D", label=L"$\mathbf{p}_{T}$", color="red", zorder=5) 
+    # style = ["-", "--", ":"]
+    style = ["-", ":", "dotted"]
+    alpha = [.3, 1., 1.]
+    for (i,gdf) in enumerate(groupby(df_agg, "name"))
+        label = gdf[!,"name"]
+        label = label[1]
+        @info "Label = $(label)"
+        points = map(p -> MultiClassAcsCertificates.Plots._to_point(gdf[!, "pY_trn_function_function"][p]), 1:number_batch)
+        tax.plot(points, linestyle=style[i], marker="x", label=label, alpha=alpha[i])
+
+    end
+    tax.left_axis_label("C3", fontsize=fontsize, position=(-0.10,0.3), rotation=0.0)
+    tax.right_axis_label("C2", fontsize=fontsize, position=(0.17,0.96), rotation=0.0)
+    tax.bottom_axis_label("C1", fontsize=fontsize, position=(0.79,0.05))
+    ticks_labels = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
+    tax.ticks(ticks=ticks_labels)
+    tax.legend(loc="upper left", fontsize=10)
+    tax.clear_matplotlib_ticks()
+    tax.get_axes().axis("off")
+    tax.savefig(output_path, transparent=true, pad_inches=0.0, bbox_inches="tight")
+
+    df_agg
+end
+
 function _mapping_names(name)
-    @info "name = $(name)"
     if name == "proportional_estimate_B"
-        L"$\text{proportional}_{\mathbb{E}_{B}}$"
+        L"$\mathrm{proportional}_{\mathbb{E}_{B}}$"
     elseif name == "proportional_estimate_C"
-        L"$\text{proportional}_{\mathbb{E}_{C}}$"
+        L"$\mathrm{proportional}_{\mathbb{E}_{C}}$"
     elseif name == "domaingap_1Inf_A_low"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_A_high"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_1Inf_B_low"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_B_high"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_1Inf_C_low"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_C_high"
-        L"$\text{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_1Inf_empirical_A_low"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_empirical_A_high"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_1Inf_empirical_B_low"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_empirical_B_high"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_1Inf_empirical_C_low"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_1Inf_empirical_C_high"
-        L"$\text{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_Inf1_A_low"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_A_high"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_Inf1_B_low"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_B_high"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_Inf1_C_low"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_C_high"
-        L"$\text{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_Inf1_empirical_A_low"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_empirical_A_high"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_Inf1_empirical_B_low"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_empirical_B_high"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_Inf1_empirical_C_low"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_Inf1_empirical_C_high"
-        L"$\text{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
     
     elseif name == "domaingap_22_A_low"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_A_high"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_22_B_low"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_B_high"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_22_C_low"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_C_high"
-        L"$\text{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_22_empirical_A_low"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_empirical_A_high"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
     elseif name == "domaingap_22_empirical_B_low"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_empirical_B_high"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
     elseif name == "domaingap_22_empirical_C_low"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
     elseif name == "domaingap_22_empirical_C_high"
-        L"$\text{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     else
-        @info "$(name)"
         name
     end
 end
