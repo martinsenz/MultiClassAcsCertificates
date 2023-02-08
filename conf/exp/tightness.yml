@@ -1,10 +1,11 @@
 
-# configuration of the tightness experiment from Table 2 and trenary plots (included Fig.1, Fig.2)
+# configuration of the tightness experiment from Table 2 and ternary plots (included Fig.1, Fig.2)
 job: tightness
 writepath: "res/experiments/tightness.csv"
 
 # mehod to estimate domain gap
 method:
+  # - SignedCertificate
   - NormedCertificate_Inf_1 # |d|_{∞} * |l|_{1}
   - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
   - NormedCertificate_2_2 # |d|_{2} * |l|_{2}

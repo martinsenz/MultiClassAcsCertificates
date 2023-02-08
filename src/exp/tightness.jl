@@ -2,7 +2,7 @@
 """
     tightness(config_path)
     
-Performs the tightness experiments from Table 2 and produce trenary plots (included Fig.1, Fig.2)
+Performs the tightness experiments from Table 2 and produce ternary plots (included Fig.1, Fig.2)
 """
 function tightness(config_path::String="conf/exp/tightness.yml")
     config = parsefile(config_path)
@@ -38,6 +38,7 @@ function _tightness_trial(config)
     # generate random test points 
     dirichlet = config["pY_tst"]
     pY_T = Data.dirichlet_pY(dirichlet["n_samples"]; α=fill(0.5, length(classes)), margin=dirichlet["margin"], seed=dirichlet["seed"])
+    #pY_T = transpose(rand(MersenneTwister(dirichlet["seed"]), Dirichlet([1.,1.,1.]), dirichlet["n_samples"]))
 
     # result dataframe 
     df = DataFrame(
@@ -56,6 +57,7 @@ function _tightness_trial(config)
         ϵ_tst=Float64[], # estimation error target data 
         ℓNorm=Float64[], # empirical classwise loss 
         ℓNormBounded=Float64[], # upper bounded classwise loss 
+        ϵ_cert_lower=Float64[], # lower bound error (SignedCertificate)
         ϵ_cert=Float64[] # from the certificate predicted domain induced error
     )
 
@@ -82,29 +84,40 @@ function _tightness_trial(config)
         ϵ_val = Certification._ϵ(length(y[val]) * config["sample_size_multiplier"], config["delta"])
 
         # set up certification method
-        hoelder_conjugate = ""
-        if occursin("Inf_1", config["method"])
-            hoelder_conjugate = "Inf_1"
-        elseif occursin("2_2", config["method"])
-            hoelder_conjugate = "2_2"
-        elseif occursin("1_Inf", config["method"])
-            hoelder_conjugate = "1_Inf"
-        else 
-            @error "Methode name $(config["method"]) not recognized!"
+        certificate = nothing
+        if config["method"] === "SignedCertificate"
+            certificate = Certification.SignedCertificate(L, y_h_val, y[val]; δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"])
+        else
+            hoelder_conjugate = ""
+            if occursin("Inf_1", config["method"])
+                hoelder_conjugate = "Inf_1"
+            elseif occursin("2_2", config["method"])
+                hoelder_conjugate = "2_2"
+            elseif occursin("1_Inf", config["method"])
+                hoelder_conjugate = "1_Inf"
+            else 
+                @error "Methode name $(config["method"]) not recognized!"
+            end
+            variant_plus = occursin("Plus", config["method"]) ? true : false # variant_plus = true => |d_(+)|_{∞} * |l|_{1}
+            certificate = NormedCertificate(L, y_h_val, y[val];
+                hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"])
         end
-        variant_plus = occursin("Plus", config["method"]) ? true : false # variant_plus = true => |d_(+)|_{∞} * |l|_{1}
-        certificate = NormedCertificate(L, y_h_val, y[val]; hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y)
-        ℓNormBounded = Inf
-        ℓNorm = Inf
-
+         
         # test the certificate for a variety of points
         for pY_tst in eachrow(pY_T)
             # predict the domain induced error for a given label shift
-            ϵ_cert = domaingap_error(certificate, pY_S, pY_tst; variant_plus=variant_plus, pac_bounds=config["pac_bounds"])
-            ℓNorm = certificate.ℓNorm
-            if config["pac_bounds"]
+            ϵ_cert = domaingap_error(certificate, pY_tst; variant_plus=variant_plus)
+            ℓNorm = Inf
+            ℓNormBounded = Inf
+            ϵ_lower = Inf
+
+            if config["method"] === "SignedCertificate"
+                ϵ_lower, ϵ_cert = ϵ_cert 
+            else
+                ℓNorm = certificate.ℓNorm
                 ℓNormBounded = certificate.ℓNormBounded
             end
+
             # subsample test data to match test point pY_tst
             i_pY = Data.subsample_indices(y[tst], Data._m_y_from_proportion(pY_tst, length(y[tst])), classes)
             y_pY = y[tst][i_pY]
@@ -116,7 +129,7 @@ function _tightness_trial(config)
             
             # update results 
             df_row = [i_rskf, config["data"], config["loss"], config["clf"], config["delta"], config["weight"], config["method"],
-                        pY_S, pY_tst, L_S_empirical, L_T_empirical, ϵ_val, ϵ_tst, ℓNorm, ℓNormBounded, ϵ_cert ]
+                        pY_S, pY_tst, L_S_empirical, L_T_empirical, ϵ_val, ϵ_tst, ϵ_lower, ℓNorm, ℓNormBounded, ϵ_cert]
         
             push!(df, df_row)
         end

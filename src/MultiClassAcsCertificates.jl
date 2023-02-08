@@ -7,7 +7,14 @@ export Util
 export Experiments
 export Plots
 export SkObject
-export NormedCertificate
+export NormedCertificate, SignedCertificate, DomainGap
+
+
+# function __init__()
+#     Conda.add_channel("conda-forge", priority=:never)
+# end
+
+
 
 """
     SkObject(class_name, configuration)

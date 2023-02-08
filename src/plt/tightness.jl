@@ -10,7 +10,7 @@ function tightness(standalone::Bool=true, full_table::Bool=true; df_path::String
     df[!,"dist_cert_tst_bound"] = abs.(df[!,"tst_bound"] .- df[!,"cert_bound"]) # absolute deviation between L_S(h) + ϵ and L_T(h)
     df[!,"dist_cert_tst"] = df[!,"emp_loss_tst"] .- df[!,"cert_bound"] # difference 
     dataset_names = []
-    scale = 100 # Scaling used for trenary plots. Should not be changed.
+    scale = 100 # Scaling used for ternary plots. Should not be changed.
 
     # write Table 2 
     _write_tightness_table(_tightness_table(df; full_table=full_table), save_path * "tex_tables/"; standalone=standalone, full_table=full_table)
@@ -49,15 +49,15 @@ function tightness(standalone::Bool=true, full_table::Bool=true; df_path::String
         name = "$(method_name)_$(clf_name)_$(loss)_$(weight)_$(delta)_$(dataset)"
         
         # create and save treanry plots
-        if !ispath("$(save_path)trenary/$(df_trial[!,"dataset"][1])")
-            mkdir("$(save_path)trenary/$(df_trial[!,"dataset"][1])")
+        if !ispath("$(save_path)ternary/$(df_trial[!,"dataset"][1])")
+            mkdir("$(save_path)ternary/$(df_trial[!,"dataset"][1])")
         end
         push!(dataset_names, df_trial[!,"dataset"][1])
-        _trenary_plot_acc(pY_T_points, pY_S_points, interpolate_dist, "$(save_path)trenary/$(dataset)/$(name)_acc.png"; scale=scale)
-        _trenary_plot_predicted_gap(gap, pY_T_points, pY_S_points, interpolate_gap, "$(save_path)trenary/$(dataset)/$(name)_gap.png"; vmin=0.0, scale=scale)
+        _ternary_plot_acc(pY_T_points, pY_S_points, interpolate_dist, "$(save_path)ternary/$(dataset)/$(name)_acc.png"; scale=scale)
+        _ternary_plot_predicted_gap(gap, pY_T_points, pY_S_points, interpolate_gap, "$(save_path)ternary/$(dataset)/$(name)_gap.png"; vmin=0.0, scale=scale)
     end
     # generate latex pdf 
-    _print_trenary_plots(dataset_names; standalone=standalone)
+    _print_ternary_plots(dataset_names; standalone=standalone)
 
 end
 
@@ -70,8 +70,10 @@ function _tightness_table(df; full_table=true, n_digits=4)
         else
             groupby(df, ["dataset", "method", "delta", "weight", "loss"])
         end 
-    res = combine(gdf, "dist_cert_tst_bound" => mean, "dist_cert_tst_bound" => std, "dist_cert_tst_bound" => q_1, "dist_cert_tst_bound" => q_2, "dist_cert_tst_bound" => q_3)
+    res = combine(gdf, "dist_cert_tst_bound" => mean, 
+                        "dist_cert_tst_bound" => std, "dist_cert_tst_bound" => q_1, "dist_cert_tst_bound" => q_2, "dist_cert_tst_bound" => q_3)
     res[!,"dist_cert_tst_bound_mean"] = round.(res[!,"dist_cert_tst_bound_mean"]; digits=n_digits)
+    res[!,"dist_cert_tst_bound_std"] = round.(res[!,"dist_cert_tst_bound_std"]; digits=n_digits)
     res[!,"dist_cert_tst_bound_std"] = round.(res[!,"dist_cert_tst_bound_std"]; digits=n_digits)
     res[!,"dist_cert_tst_bound_q_1"] = round.(res[!,"dist_cert_tst_bound_q_1"]; digits=n_digits)
     res[!,"dist_cert_tst_bound_q_2"] = round.(res[!,"dist_cert_tst_bound_q_2"]; digits=n_digits)
@@ -116,7 +118,7 @@ function _write_tightness_table(df, save_path; standalone=true, full_table=true)
             for (i,row) in enumerate(eachrow(gdf))
                 appendix = mod(i, length(df[!,"dataset"]) / length(unique(df[!,"dataset"]))) == 0 ? "[.5em]" : ""
                 println(io, "$(replace(row["dataset"], "_" => " ")) & $(_strategy_names(row["method"])) & 
-                                                    \$$(row["dist_cert_tst_bound_mean"]) \\pm $(row["dist_cert_tst_bound_mean"])\$ &
+                                                    \$$(row["dist_cert_tst_bound_mean"]) \\pm $(row["dist_cert_tst_bound_std"])\$ &
                                                     \$$(row["dist_cert_tst_bound_q_1"])\$ & 
                                                     \$$(row["dist_cert_tst_bound_q_2"])\$ & 
                                                     \$$(row["dist_cert_tst_bound_q_3"])\$\\\\$(appendix)"   )
@@ -132,7 +134,36 @@ function _write_tightness_table(df, save_path; standalone=true, full_table=true)
     @info "Written tables to $(save_path)absolute_deviation.tex"
 end
 
-function _trenary_plot_acc(points_pY, pY_S_points, interpolate_function, savepath; scale=100)
+function _ternary_plot_class_prior_distribution(class_prior_distribution, pY_T, savepath; scale=100, n_points=1000)
+
+    figure, tax = Plots.ternary.figure(scale=scale)
+    figure.suptitle(L"$\mathbb{E}$ = " * "$(mean(class_prior_distribution))", fontsize=20)
+    figure.set_size_inches(10, 10)
+    tax.boundary(linewidth=3.0)
+    tax.gridlines(multiple=scale/10, color="white")
+    fontsize = 17
+    cb_kwargs = Dict(Dict(:use_gridspec => false, :location => "bottom", :pad => -0.03))
+
+    f(x) = Distributions.pdf(class_prior_distribution, x)
+    tax.heatmapf(f, scale=scale, colorbar=true; cb_kwargs)
+    tax.scatter(pY_T, marker="D", label=L"$\mathbf{p}_{T}$", color="red", zorder=5)  
+    tax.left_axis_label("C3", fontsize=fontsize, position=(-0.10,0.3), rotation=0.0)
+    tax.right_axis_label("C2", fontsize=fontsize, position=(0.17,0.96), rotation=0.0)
+    tax.bottom_axis_label("C1", fontsize=fontsize, position=(0.79,0.05))
+    ticks_labels = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
+    tax.ticks(ticks=ticks_labels)
+    tax.legend(loc="upper right", fontsize=20)
+    tax.clear_matplotlib_ticks()
+    tax.get_axes().axis("off")
+    tax.savefig(savepath, transparent=true, pad_inches=0.0, bbox_inches="tight")
+    figure.clear()
+    tax.close()
+    tax = nothing
+    figure = nothing
+    
+end
+
+function _ternary_plot_acc(points_pY, pY_S_points, interpolate_function, savepath; scale=100)
     d = Dict()
     for (i,j,k) in Plots.simplex_iterator(scale)
         push!(d, (i,j) => interpolate_function((i,j,k)))
@@ -164,7 +195,7 @@ function _trenary_plot_acc(points_pY, pY_S_points, interpolate_function, savepat
     
 end
 
-function _trenary_plot_predicted_gap(gap, points_pY, pY_S_points, interpolate_function, savepath; scale=100, vmin=0.0)
+function _ternary_plot_predicted_gap(gap, points_pY, pY_S_points, interpolate_function, savepath; scale=100, vmin=0.0)
     figure, tax = nothing, nothing
     if gap !== nothing
         figure, tax = Plots.contours_coordinates(gap, collect(0.05:0.05:10), 100)
@@ -220,7 +251,7 @@ function _caption_from_filename(filename)
     "\\textbf{$(dataset)}: $(method_name) with $(clf_name), $(loss) (weight=$(weight)) and \$\\delta=$(delta)\$." 
 end
 
-function _print_trenary_plots(dataset_names; standalone=true, load_dir::String="res/plots/trenary/")
+function _print_ternary_plots(dataset_names; standalone=true, load_dir::String="res/plots/ternary/")
     open(load_dir * "tightness_plots.tex", "w") do io 
         if standalone
             _write_header(io)
@@ -252,6 +283,6 @@ function _print_trenary_plots(dataset_names; standalone=true, load_dir::String="
         if standalone
             println(io, "\\end{document}")
         end
-        @info "Written trenary plots to $(load_dir)tightness_plots.tex"
+        @info "Written ternary plots to $(load_dir)tightness_plots.tex"
     end
 end
