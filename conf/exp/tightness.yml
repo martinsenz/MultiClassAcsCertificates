@@ -19,8 +19,19 @@ data:
   - satimage
   - pendigits
   - eyemovements
+  - bng
   - shuttle
   - connect4
+  - waveform_5000
+  - dna
+  - wall_robot_navigation
+  - bng_vehicle
+  - jannis
+  - nursery
+  - dilbert
+  - har
+  - first_order_theorem_proving
+  - wine_quality_white
 
 # used loss function
 loss:
