@@ -23,8 +23,9 @@ using CSV
 # Motivation  #
 # # # # # # # #
 
-snames = [ "random", "inverse", "improvement", "redistriction", "proportional" ]
+snames = [ "inverse", "improvement", "redistriction", "proportional" ]
 MultiClassAcsCertificates.Plots.acquisition("motivation", snames; ternary=false)
+MultiClassAcsCertificates.Plots.acquisition("mReviotivation", snames; ternary=true)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -34,10 +35,16 @@ MultiClassAcsCertificates.Plots.acquisition("motivation", snames; ternary=false)
 # geringe Unsicherheit
 snames = [ "proportional" , "domaingap_1Inf_A_low", "domaingap_22_A_low", "domaingap_Inf1_A_low" ]
 MultiClassAcsCertificates.Plots.acquisition("domaingap_A_low", snames; ternary=false)
+MultiClassAcsCertificates.Plots.acquisition("domaingap_A_low", snames; ternary=true)
 
 # höhere Unsicherheit
 snames = [ "proportional" , "domaingap_1Inf_A_high", "domaingap_22_A_high", "domaingap_Inf1_A_high" ]
 MultiClassAcsCertificates.Plots.acquisition("domaingap_A_high", snames; ternary=false)
+MultiClassAcsCertificates.Plots.acquisition("domaingap_A_high", snames; ternary=true)
+
+snames = [ "proportional" , "domaingap_22_A_high", "domaingap_22_A_low" ]
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_A", snames; ternary=false)
+MultiClassAcsCertificates.Plots.acquisition("domaingap_A", snames; ternary=true)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -47,22 +54,28 @@ MultiClassAcsCertificates.Plots.acquisition("domaingap_A_high", snames; ternary=
 # Setze Class Label Prior auf B oder C 
 snames = [ "proportional" , "proportional_estimate_B", "domaingap_22_B_high", "domaingap_22_B_low" ]
 MultiClassAcsCertificates.Plots.acquisition("domaingap_22_B", snames; ternary=false)
+MultiClassAcsCertificates.Plots.acquisition("domaingap_22_B", snames; ternary=true)
 
 snames = [ "proportional" , "proportional_estimate_C", "domaingap_22_C_high", "domaingap_22_C_low" ]
+MultiClassAcsCertificates.Plots.acquisition("domaingap_22_C", snames; ternary=false)
 MultiClassAcsCertificates.Plots.acquisition("domaingap_22_C", snames; ternary=true)
 
-# Empirische Varianten?
-snames = [ "proportional" , "proportional_estimate_B", "domaingap_22_B_low", "domaingap_22_empirical_B_low" ]
-MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_low", snames; ternary=false)
+# # Empirische Varianten?
+# snames = [ "proportional" , "proportional_estimate_B", "domaingap_22_B_low", "domaingap_22_empirical_B_low" ]
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_low", snames; ternary=false)
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_low", snames; ternary=true)
 
-snames = [ "proportional" , "proportional_estimate_B", "domaingap_22_B_high", "domaingap_22_empirical_B_high" ]
-MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_high", snames; ternary=false)
+# snames = [ "proportional" , "proportional_estimate_B", "domaingap_22_B_high", "domaingap_22_empirical_B_high" ]
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_high", snames; ternary=false)
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_B_high", snames; ternary=true)
 
-snames = [ "proportional" , "proportional_estimate_C", "domaingap_22_C_low", "domaingap_22_empirical_C_low" ]
-MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_low", snames; ternary=true)
+# snames = [ "proportional" , "proportional_estimate_C", "domaingap_22_C_low", "domaingap_22_empirical_C_low" ]
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_low", snames; ternary=false)
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_low", snames; ternary=true)
 
-snames = [ "proportional" , "proportional_estimate_C", "domaingap_22_C_high", "domaingap_22_empirical_C_high" ]
-MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_high", snames; ternary=true)
+# snames = [ "proportional" , "proportional_estimate_C", "domaingap_22_C_high", "domaingap_22_empirical_C_high" ]
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_high", snames; ternary=false)
+# MultiClassAcsCertificates.Plots.acquisition("domaingap_22_empirical_C_high", snames; ternary=true)
 
 
 

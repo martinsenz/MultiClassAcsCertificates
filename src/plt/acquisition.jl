@@ -33,7 +33,7 @@ function acquisition(filename::String, strategy_selection::Vector{String};
         _plot_ternary_class_proportions(df, base_output_dir * "/ternary/" * filename * ".png")
     else 
         _plot_critical_diagram(df, base_output_dir * "/tex/" * filename * "_CD.tex", count_strategies; gid=gid, standalone=standalone)
-        _plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
+        #_plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
     end
 
     # for f in *.tex; do pdflatex $f; latexmk -c $f; done
@@ -54,10 +54,10 @@ function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch",
     plot = CriticalDifferenceDiagrams.plot(sequence...)
     plot.style = join([
         "y dir=reverse",
-        "ytick={1,2,3,4,5,6,7,8}",
-        "yticklabels={2,3,4,5,6,7,8,9}",
-        "ylabel={ACS-Batch}",
-        "xlabel={avg. Rang}",
+        "ytick={1,2,3,4,5,6,7,8,9}",
+        "yticklabels={2,3,4,5,6,7,8,9,10}",
+        "ylabel={batch}",
+        "xlabel={avg. rank}",
         "ylabel style={font=\\small}",
         "xlabel style={font=\\small}",
         "yticklabel style={font=\\small}",
@@ -89,6 +89,7 @@ function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch",
         "\\definecolor{chartreuse(traditional)}{rgb}{0.87, 1.0, 0.0}"
     ], "\n"))
     PGFPlots.save(output_path, plot)
+    @info "Print CD in $(output_path)"
 end
 
 function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"], standalone=true)
@@ -97,7 +98,7 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
         "title={KL-Divergenz nach \$p_\\mathcal{T}=[0.7, 0.2, 0.1]\$}",
         "legend style={draw=none,fill=none,at={(1.1,.5)},anchor=west,row sep=.25em}",
         "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*}}",
-        "xtick={1,3,5,7}"
+        "xtick={1,2,3,4,5,6,7,8,9,10}"
     ], ", "))
     for (key, sdf) in pairs(groupby(df, vcat(setdiff(gid, ["batch"]), ["name"])))
         if key.name == "proportional"
@@ -105,7 +106,7 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
         end
         sdf = combine(
             groupby(
-                sdf[sdf[!, "batch"].<=8, :],
+                sdf[sdf[!, "batch"].<=10, :],
                 vcat(gid, ["name"])
             ),
             "kl_prop" => StatsBase.mean => "kl_prop",
@@ -145,8 +146,8 @@ function _plot_ternary_class_proportions(df, output_path; number_batch=10)
     fontsize = 17
     cb_kwargs = Dict(Dict(:use_gridspec => false, :location => "bottom", :pad => -0.03))
 
-    tax.scatter([_to_point([0.3333,0.3333,0.3333])], marker="D", label="Initial", color="blue", zorder=5)
-    tax.scatter([_to_point([0.7,0.2,0.1])], marker="D", label=L"$\mathbf{p}_{T}$", color="red", zorder=5) 
+    tax.scatter([_to_point([0.3333,0.3333,0.3333])], marker="D", label=L"$\mathbf{p}_\mathcal{S}$", color="blue", zorder=5)
+    tax.scatter([_to_point([0.7,0.2,0.1])], marker="D", label=L"$\mathbf{p}_\mathcal{T}$", color="red", zorder=5) 
     # style = ["-", "--", ":"]
     #style = ["-", ":", "dotted"]
     #alpha = [.3, 1., 1.]
@@ -167,29 +168,33 @@ function _plot_ternary_class_proportions(df, output_path; number_batch=10)
     tax.bottom_axis_label("C1", fontsize=fontsize, position=(0.79,0.05))
     ticks_labels = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
     tax.ticks(ticks=ticks_labels)
-    tax.legend(loc="upper left", fontsize=10)
+    tax.legend(loc="upper left", fontsize=15, framealpha=0)
     tax.clear_matplotlib_ticks()
     tax.get_axes().axis("off")
     tax.savefig(output_path, transparent=true, pad_inches=0.0, bbox_inches="tight")
+    @info "Print ternary class prop in $(output_path)"
 end
 
 function _mapping_names(name)
     if name == "proportional_estimate_B"
-        L"$\mathrm{proportional}_{\mathbb{E}_{B}}$"
+        L"$\mathrm{proportional}_{\mathbf{o}}$"
     elseif name == "proportional_estimate_C"
-        L"$\mathrm{proportional}_{\mathbb{E}_{C}}$"
+        L"$\mathrm{proportional}_{\mathbf{u}}$"
     elseif name == "domaingap_1Inf_A_low"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
     elseif name == "domaingap_1Inf_A_high"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
     elseif name == "domaingap_1Inf_B_low"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{o}}^{low}$"
     elseif name == "domaingap_1Inf_B_high"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{o}}^{high}$"
     elseif name == "domaingap_1Inf_C_low"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{low}$"
     elseif name == "domaingap_1Inf_C_high"
-        L"$\mathrm{domaingap}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{high}$"
+
+    elseif name == "proportional"
+        L"$\mathrm{proportional}_{\mathbf{p}_{\mathcal{T}}}$"
 
     elseif name == "domaingap_1Inf_empirical_A_low"
         L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
@@ -205,17 +210,17 @@ function _mapping_names(name)
         L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_Inf1_A_low"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
     elseif name == "domaingap_Inf1_A_high"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
     elseif name == "domaingap_Inf1_B_low"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{o}}^{low}$"
     elseif name == "domaingap_Inf1_B_high"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{o}}^{high}$"
     elseif name == "domaingap_Inf1_C_low"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{u}}^{low}$"
     elseif name == "domaingap_Inf1_C_high"
-        L"$\mathrm{domaingap}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(\infty,1)_{\mathbf{u}}^{high}$"
 
     elseif name == "domaingap_Inf1_empirical_A_low"
         L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
@@ -231,17 +236,17 @@ function _mapping_names(name)
         L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
     
     elseif name == "domaingap_22_A_low"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
     elseif name == "domaingap_22_A_high"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
     elseif name == "domaingap_22_B_low"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{o}}^{low}$"
     elseif name == "domaingap_22_B_high"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{o}}^{high}$"
     elseif name == "domaingap_22_C_low"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{u}}^{low}$"
     elseif name == "domaingap_22_C_high"
-        L"$\mathrm{domaingap}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
+        L"$\mathrm{certificate}(2,2)_{\mathbf{u}}^{high}$"
 
     elseif name == "domaingap_22_empirical_A_low"
         L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
