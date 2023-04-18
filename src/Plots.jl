@@ -85,6 +85,13 @@ function _strategy_names(name)
     end
 end
 
+# tu-dortmund colors
+tu_colors = Dict("tu01" => (0.52, 0.72, 0.09),  # green
+                 "tu02" => (0.82, 0.55, 0.07),  # brown
+                 "tu03" => (0.10, 0.71, 0.71),  # cyan
+                 "tu04" => (0.97, 0.35, 0.24),  # red
+                 "tu05" => (0.29, 0.42, 0.99))  # blue
+
 include("plt/tightness.jl")
 include("plt/certify.jl")
 include("plt/acquisition.jl")

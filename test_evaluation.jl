@@ -25,7 +25,7 @@ using CSV
 
 snames = [ "inverse", "improvement", "redistriction", "proportional" ]
 MultiClassAcsCertificates.Plots.acquisition("motivation", snames; ternary=false)
-MultiClassAcsCertificates.Plots.acquisition("mReviotivation", snames; ternary=true)
+MultiClassAcsCertificates.Plots.acquisition("motivation", snames; ternary=true)
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
@@ -84,36 +84,16 @@ MultiClassAcsCertificates.Plots.acquisition("domaingap_22_C", snames; ternary=tr
 # # ternary Plots for class proportions #
 # # # # # # # # # # # # # # # # # # # # # 
 
-# snames = ["domaingap_1Inf_A_high", "domaingap_1Inf_A_low", "proportional"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("1Inf_A", snames; ternary=true)
+# domaingap_A_low
+snames = ["domaingap_Inf1_A_low", "domaingap_22_A_low", "domaingap_1Inf_A_low", "proportional"]
+df_agg = MultiClassAcsCertificates.Plots.acquisition("domaingap_A_low", snames; ternary=true, color=["tu01", "tu02", "tu03", "tu04"])
 
-# snames = ["domaingap_1Inf_B_high", "domaingap_1Inf_B_low", "proportional_estimate_B"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("1Inf_B", snames; ternary=true)
+# domaingap_A_high
+snames = ["domaingap_Inf1_A_high", "domaingap_22_A_high", "domaingap_1Inf_A_high", "proportional"]
+df_agg = MultiClassAcsCertificates.Plots.acquisition("domaingap_A_high", snames; ternary=true, color=["tu01", "tu02", "tu03", "tu04"])
 
-# snames = ["domaingap_1Inf_C_high", "domaingap_1Inf_C_low", "proportional_estimate_C"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("1Inf_C", snames; ternary=true)
+snames = ["domaingap_22_B_low", "domaingap_22_B_high", "proportional_estimate_B", "proportional"]
+df_agg = MultiClassAcsCertificates.Plots.acquisition("domaingap_22_B", snames; ternary=true, color=["tu01", "tu02", "tu03", "tu04"])
 
-
-# snames = ["domaingap_22_A_high", "domaingap_22_A_low", "proportional"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("22_A", snames; ternary=true)
-
-# snames = ["domaingap_22_B_high", "domaingap_22_B_low", "proportional_estimate_B"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("22_B", snames; ternary=true)
-
-# snames = ["domaingap_22_C_high", "domaingap_22_C_low", "proportional_estimate_C"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("22_C", snames; ternary=true)
-
-
-# snames = ["domaingap_Inf1_A_high", "domaingap_Inf1_A_low", "proportional"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("Inf1_A", snames; ternary=true)
-
-# snames = ["domaingap_Inf1_B_high", "domaingap_Inf1_B_low", "proportional_estimate_B"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("Inf1_B", snames; ternary=true)
-
-# snames = ["domaingap_Inf1_C_high", "domaingap_Inf1_C_low", "proportional_estimate_C"]
-# df_agg = MultiClassAcsCertificates.Plots.acquisition("Inf1_C", snames; ternary=true)
-
-
-
-
-
+snames = ["domaingap_22_C_low", "domaingap_22_C_high", "proportional_estimate_C", "proportional"]
+df_agg = MultiClassAcsCertificates.Plots.acquisition("domaingap_22_C", snames; ternary=true, color=["tu01", "tu02", "tu03", "tu04"])

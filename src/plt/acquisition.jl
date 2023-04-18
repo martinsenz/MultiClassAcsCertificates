@@ -1,5 +1,5 @@
 function acquisition(filename::String, strategy_selection::Vector{String}; 
-            df_path::String="res/experiments/acquisition.csv", base_output_dir="res/plots/acquisition/", standalone=true, ternary=false)
+            df_path::String="res/experiments/acquisition.csv", base_output_dir="res/plots/acquisition/", standalone=true, ternary=false, color=["tu01", "tu02", "tu03", "tu04", "tu05"])
     
     df = CSV.read(df_path, DataFrame)
     idx = map(strategy -> strategy ∈ strategy_selection ? true : false, df[!, "name"])
@@ -27,11 +27,13 @@ function acquisition(filename::String, strategy_selection::Vector{String};
     #     combine(groupby(df, ["data", "batch", "pY_T"]), nrow)
     # )
     # df = semijoin(df, cnt, on=["data", "batch", "pY_T"])
-    df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
+
+    #df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
 
     if ternary
-        _plot_ternary_class_proportions(df, base_output_dir * "/ternary/" * filename * ".png")
+        _plot_ternary_class_proportions(df, base_output_dir * "/ternary/" * filename * ".png"; color=color, strategy_selection=strategy_selection)
     else 
+        df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
         _plot_critical_diagram(df, base_output_dir * "/tex/" * filename * "_CD.tex", count_strategies; gid=gid, standalone=standalone)
         #_plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
     end
@@ -135,8 +137,9 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
     PGFPlots.save(output_path, plot)
 end
 
-function _plot_ternary_class_proportions(df, output_path; number_batch=10)
+function _plot_ternary_class_proportions(df, output_path; number_batch=10, color=["tu01", "tu02", "tu03", "tu04", "tu05"], strategy_selection=strategy_selection)
     df_agg = combine(groupby(df, ["name", "batch"]), "pY_trn_function" => x -> mean(x,dims=1))
+    #return df_agg
     scale = 100
     figure, tax = Plots.ternary.figure(scale=scale)
     # figure.suptitle("Title", fontsize=20)
@@ -151,24 +154,35 @@ function _plot_ternary_class_proportions(df, output_path; number_batch=10)
     # style = ["-", "--", ":"]
     #style = ["-", ":", "dotted"]
     #alpha = [.3, 1., 1.]
-    for gdf in groupby(df_agg, "name")
-        label = gdf[!,"name"][1]
+    i = 1
+    #for gdf in groupby(df_agg, "name")
+    for strategy in strategy_selection
+        gdf = df_agg[df_agg[!, "name"] .== strategy, :]
+        label = _mapping_names(gdf[!,"name"][1])
         # label = label[1]
         points = map(p -> MultiClassAcsCertificates.Plots._to_point(gdf[!, "pY_trn_function_function"][p]), 1:number_batch)
         linestyle = "dotted"
+        marker = "x"
         alpha = 1.0
-        if contains(label, "proportional")
+        if gdf[!,"name"][1] == "proportional"
             linestyle = "-"
-            alpha = .3
+            marker = "."
+            alpha = 1.0
         end
-        tax.plot(points, linestyle=linestyle, marker="x", label=label, alpha=alpha)
+        if contains(gdf[!,"name"][1], "estimate")
+            linestyle = "-."
+            marker = "."
+            alpha = 1.0
+        end
+        tax.plot(points, linestyle=linestyle, marker=marker, color=tu_colors[color[i]], label=label, alpha=alpha)
+        i += 1
     end
     tax.left_axis_label("C3", fontsize=fontsize, position=(-0.10,0.3), rotation=0.0)
     tax.right_axis_label("C2", fontsize=fontsize, position=(0.17,0.96), rotation=0.0)
     tax.bottom_axis_label("C1", fontsize=fontsize, position=(0.79,0.05))
     ticks_labels = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
     tax.ticks(ticks=ticks_labels)
-    tax.legend(loc="upper left", fontsize=15, framealpha=0)
+    tax.legend(loc="upper left", fontsize=17, framealpha=0)
     tax.clear_matplotlib_ticks()
     tax.get_axes().axis("off")
     tax.savefig(output_path, transparent=true, pad_inches=0.0, bbox_inches="tight")
