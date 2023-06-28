@@ -81,7 +81,19 @@ function _strategy_names(name)
     elseif name == "NormedCertificatePlus_1_Inf"
         "\$ \\lVert \\mathbf{d}_{+} \\rVert_{1} \\cdot \\lVert \\boldsymbol{\\ell}_{h} \\rVert_{\\infty} \$"
     else
-        @error("Method name $(name) not recognized!")
+        name
+    end
+end
+
+function _classifier_names(name)
+    if name === "sklearn.neural_network.MLPClassifier"
+        "MLPClassifier"
+    elseif name === "sklearn.tree.DecisionTreeClassifier"
+        "DecisionTreeClassifier"
+    elseif name === "sklearn.linear_model.LogisticRegression"
+        "LogisticRegression"
+    else
+        name
     end
 end
 
@@ -92,6 +104,8 @@ tu_colors = Dict("tu01" => (0.52, 0.72, 0.09),  # green
                  "tu04" => (0.97, 0.35, 0.24),  # red
                  "tu05" => (0.29, 0.42, 0.99))  # blue
 
+
+include("plt/datasets.jl")
 include("plt/tightness.jl")
 include("plt/certify.jl")
 include("plt/acquisition.jl")

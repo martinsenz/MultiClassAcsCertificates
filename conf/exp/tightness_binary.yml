@@ -1,0 +1,66 @@
+
+# 
+job: tightness
+writepath: "res/experiments/CheckSGD.csv"
+
+# mehod to estimate domain gap
+method:
+  - BinaryCertificate 
+  - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
+  - NormedCertificatePlus_2_2 # |d_{+}|_{2} * |l|_{2}
+  - NormedCertificatePlus_1_Inf # |d_{+}|_{1} * |l|_{∞}
+
+# datasets to be tested
+data:
+  - optdigitsBinary
+  - satimageBinary
+  - pendigitsBinary
+  - eyemovementsBinary
+  - shuttleBinary
+  - connect4Binary
+  - waveformBinary
+  - dnaBinary
+  - wallrobotBinary
+  - vehicleBinary
+  - jannisBinary
+  - nurseryBinary
+  - pageblocksBinary
+  - dilbertBinary
+  - harBinary
+  - theoremprovingBinary
+  - winequalitywhiteBinary
+  # - protein_homo # imblearn
+  # - pen_digits
+  # - fact_balanced
+  # - fact_imbalanced
+  # - letter_img
+  # - satimage
+  # - coil_2000
+  # - optical_digits
+
+# used loss function
+loss:
+  - ZeroOneLoss
+
+# classifier
+clf:
+  - sklearn.neural_network.MLPClassifier
+
+# class weight
+weight:
+  - uniform
+
+# parameters of the certificate 
+delta:
+  - 0.05
+
+pac_bounds: true
+
+# how to sub-sample the test set
+pY_tst:
+  n: 10 # number of logarithmically equidistant steps
+
+# parameters for a RepeatedStratifiedKFold
+rskf:
+  n_repeats: 3
+  random_state: 123

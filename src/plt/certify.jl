@@ -7,8 +7,8 @@ function certify(df_path::String="res/experiments/certify.csv", save_path::Strin
     df = CSV.read(df_path, DataFrame)
     df[!,"pY_S"] = eval.(Meta.parse.(df[!,"pY_S"]))
     res = combine(groupby(df, ["dataset","method", "clf", "delta" ,"epsilon", "loss", "weight"]), "pY_S" => x -> mean(x,dims=1), "L_S" => mean, "delta_p" => mean)
-    _write_certify_table(res, save_path * "tex_tables/", standalone)
-    @info "Writing tables to $(save_path)tex_tables/certify.tex"
+    _write_certify_table(res, save_path * "tex/", standalone)
+    @info "Writing tables to $(save_path)tex/certify.tex"
 end
 
 # write table 1

@@ -1,13 +1,16 @@
-function acquisition(filename::String, strategy_selection::Vector{String}; 
-            df_path::String="res/experiments/acquisition.csv", base_output_dir="res/plots/acquisition/", standalone=true, ternary=false, color=["tu01", "tu02", "tu03", "tu04", "tu05"])
+
+
+function acquisition(filename::String, strategy_selection::Vector{String}, loadpath;
+                base_output_dir="res/plots/acquisition/", standalone=true, color=["tu01", "tu02", "tu03", "tu04", "tu05"])
     
-    df = CSV.read(df_path, DataFrame)
+    df = CSV.read(loadpath, DataFrame)
     idx = map(strategy -> strategy ∈ strategy_selection ? true : false, df[!, "name"])
     df = df[idx, :]
 
     df[!, "pY_trn"] = eval.(Meta.parse.(df[!, "pY_trn"]))
     df[!, "pY_T"] = eval.(Meta.parse.(df[!, "pY_T"]))
-    df[!, "kl_unif"] = map(i -> Distances.kl_divergence(df[!, "pY_trn"][i], ones(3) ./ 3), 1:nrow(df))
+    n_classes = length(df[!, "pY_T"][1])
+    df[!, "kl_unif"] = map(i -> Distances.kl_divergence(df[!, "pY_trn"][i], ones(n_classes) ./ n_classes), 1:nrow(df))
     df[!, "kl_prop"] = map(i -> Distances.kl_divergence(df[!, "pY_trn"][i], df[!, "pY_T"][i] ), 1:nrow(df))
     count_strategies = length(unique(df[!, "name"]))
     @info "There were identified $(count_strategies) strategy configurations" 
@@ -21,24 +24,14 @@ function acquisition(filename::String, strategy_selection::Vector{String};
         "kl_prop" => StatsBase.mean => "kl_prop",
         "pY_trn" => x -> mean(x,dims=1)
     )
-    
-    # cnt = filter(
-    #     "nrow" => x -> x .== length(unique(df[!, "name"])),
-    #     combine(groupby(df, ["data", "batch", "pY_T"]), nrow)
-    # )
-    # df = semijoin(df, cnt, on=["data", "batch", "pY_T"])
-
-    #df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
-
-    if ternary
-        _plot_ternary_class_proportions(df, base_output_dir * "/ternary/" * filename * ".png"; color=color, strategy_selection=strategy_selection)
-    else 
-        df[!, "name"] = map(x -> _mapping_names(x), df[!, "name"])
-        _plot_critical_diagram(df, base_output_dir * "/tex/" * filename * "_CD.tex", count_strategies; gid=gid, standalone=standalone)
-        #_plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
+    if n_classes == 2
+        _plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
+        df[!, "name"] = map(x -> _mapping_names_binary(x), df[!, "name"])
+    else
+        _ternary_batch_proportions(df, base_output_dir * "/ternary/" * filename * "_batch_prop.png"; color=color, strategy_selection=strategy_selection)
+        df[!, "name"] = map(x -> _mapping_names_multiclass(x), df[!, "name"])
     end
-
-    # for f in *.tex; do pdflatex $f; latexmk -c $f; done
+    _plot_critical_diagram(df, base_output_dir * "/tex/" * filename * "_CD.tex", count_strategies; gid=gid, standalone=standalone)
 end
 
 function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch", "clf", "loss", "delta"], standalone=true)
@@ -73,7 +66,7 @@ function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch",
         "ymin=.75",
         "ymax=$(length(sequence)).75",
         "clip=false",
-        "legend style={draw=none,fill=none,at={(1.1,.5)},anchor=west,row sep=.25em}",
+        "legend style={draw=none,fill=none,at={(0.5,-0.02)},anchor=north,column sep=.25em, legend columns=4}",
         "x dir=reverse",
         "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*},{gray, mark=diamond*}}",
         "width=\\axisdefaultwidth, height=\\axisdefaultheight"
@@ -97,15 +90,28 @@ end
 function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"], standalone=true)
 
     plot = Axis(style = join([
-        "title={KL-Divergenz nach \$p_\\mathcal{T}=[0.7, 0.2, 0.1]\$}",
-        "legend style={draw=none,fill=none,at={(1.1,.5)},anchor=west,row sep=.25em}",
+        "title={}",
+        "legend style={draw=none,fill=none,at={(0.5,-0.02)},anchor=north,column sep=.25em, legend columns=4}",
         "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*}}",
-        "xtick={1,2,3,4,5,6,7,8,9,10}"
+        "xtick={1,2,3,4,5,6,7,8,9,10}",
+        "axis x line=top",
+        "xticklabel pos=top",
+        "axis y line=right",
+        "yticklabel pos=right",
+        "ylabel=\$d_{\text{KL}}\$",
+        "xlabel=batch",
+        "ylabel style={shift={(0,1ex)}}",
+        "xmajorgrids",
+        "tick style={draw=none}",
+        "clip=false",
+        "axis line style={draw=none}",
+        "xlabel style={font=\\small, shift={(0,0.7ex)}}",
+        "xticklabel style={font=\\small}"
     ], ", "))
     for (key, sdf) in pairs(groupby(df, vcat(setdiff(gid, ["batch"]), ["name"])))
-        if key.name == "proportional"
-            continue # KL divergence is usually zero, so that ymode=log does not work in general
-        end
+        #if key.name == "proportional"
+        #    continue # KL divergence is usually zero, so that ymode=log does not work in general
+        #end
         sdf = combine(
             groupby(
                 sdf[sdf[!, "batch"].<=10, :],
@@ -117,7 +123,7 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
         push!(plot, PGFPlots.Plots.Linear(
             sdf[!, "batch"],
             sdf[!, "kl_prop"],
-            legendentry=string(key.name),
+            legendentry=_mapping_names_binary(string(key.name)),
             errorBars=PGFPlots.ErrorBars(y=sdf[!, "kl_prop_std"])
         ))
     end
@@ -137,12 +143,10 @@ function _plot_kl_diagram(df, output_path; gid=["batch", "clf", "loss", "delta"]
     PGFPlots.save(output_path, plot)
 end
 
-function _plot_ternary_class_proportions(df, output_path; number_batch=10, color=["tu01", "tu02", "tu03", "tu04", "tu05"], strategy_selection=strategy_selection)
+function _ternary_batch_proportions(df, output_path; 
+                                        number_batch=10, color=["tu01", "tu02", "tu03", "tu04", "tu05"], strategy_selection=strategy_selection)
     df_agg = combine(groupby(df, ["name", "batch"]), "pY_trn_function" => x -> mean(x,dims=1))
-    #return df_agg
-    scale = 100
     figure, tax = Plots.ternary.figure(scale=scale)
-    # figure.suptitle("Title", fontsize=20)
     figure.set_size_inches(10, 10)
     tax.boundary(linewidth=3.0)
     tax.gridlines(multiple=scale/10, color="black")
@@ -151,15 +155,10 @@ function _plot_ternary_class_proportions(df, output_path; number_batch=10, color
 
     tax.scatter([_to_point([0.3333,0.3333,0.3333])], marker="D", label=L"$\mathbf{p}_\mathcal{S}$", color="blue", zorder=5)
     tax.scatter([_to_point([0.7,0.2,0.1])], marker="D", label=L"$\mathbf{p}_\mathcal{T}$", color="red", zorder=5) 
-    # style = ["-", "--", ":"]
-    #style = ["-", ":", "dotted"]
-    #alpha = [.3, 1., 1.]
     i = 1
-    #for gdf in groupby(df_agg, "name")
     for strategy in strategy_selection
         gdf = df_agg[df_agg[!, "name"] .== strategy, :]
-        label = _mapping_names(gdf[!,"name"][1])
-        # label = label[1]
+        label = _mapping_names_multiclass(gdf[!,"name"][1])
         points = map(p -> MultiClassAcsCertificates.Plots._to_point(gdf[!, "pY_trn_function_function"][p]), 1:number_batch)
         linestyle = "dotted"
         marker = "x"
@@ -189,11 +188,78 @@ function _plot_ternary_class_proportions(df, output_path; number_batch=10, color
     @info "Print ternary class prop in $(output_path)"
 end
 
-function _mapping_names(name)
+function _mapping_names_binary(name)
+    if name == "proportional_estimate_B"
+        L"$\mathrm{proportional}_{{o}}$"
+    elseif name == "proportional_estimate_C"
+        L"$\mathrm{proportional}_{{u}}$"
+    elseif name == "proportional"
+        L"$\mathrm{proportional}_{{p}_{\mathcal{T}}}$"
+
+    elseif name == "domaingap_1Inf_A_low"
+        L"$\mathrm{certificate}(1,\infty)_{{p}_{\mathcal{T}}}^{low}$"
+    elseif name == "domaingap_1Inf_A_high"
+        L"$\mathrm{certificate}(1,\infty)_{{p}_{\mathcal{T}}}^{high}$"
+    elseif name == "domaingap_1Inf_B_low"
+        L"$\mathrm{certificate}(1,\infty)_{{o}}^{low}$"
+    elseif name == "domaingap_1Inf_B_high"
+        L"$\mathrm{certificate}(1,\infty)_{{o}}^{high}$"
+    elseif name == "domaingap_1Inf_C_low"
+        L"$\mathrm{certificate}(1,\infty)_{{u}}^{low}$"
+    elseif name == "domaingap_1Inf_C_high"
+        L"$\mathrm{certificate}(1,\infty)_{{u}}^{high}$"
+
+    elseif name == "domaingap_Inf1_A_low"
+        L"$\mathrm{certificate}(\infty,1)_{{p}_{\mathcal{T}}}^{low}$"
+    elseif name == "domaingap_Inf1_A_high"
+        L"$\mathrm{certificate}(\infty,1)_{{p}_{\mathcal{T}}}^{high}$"
+    elseif name == "domaingap_Inf1_B_low"
+        L"$\mathrm{certificate}(\infty,1)_{{o}}^{low}$"
+    elseif name == "domaingap_Inf1_B_high"
+        L"$\mathrm{certificate}(\infty,1)_{{o}}^{high}$"
+    elseif name == "domaingap_Inf1_C_low"
+        L"$\mathrm{certificate}(\infty,1)_{{u}}^{low}$"
+    elseif name == "domaingap_Inf1_C_high"
+        L"$\mathrm{certificate}(\infty,1)_{{u}}^{high}$"
+
+    elseif name == "domaingap_22_A_low"
+        L"$\mathrm{certificate}(2,2)_{{p}_{\mathcal{T}}}^{low}$"
+    elseif name == "domaingap_22_A_high"
+        L"$\mathrm{certificate}(2,2)_{{p}_{\mathcal{T}}}^{high}$"
+    elseif name == "domaingap_22_B_low"
+        L"$\mathrm{certificate}(2,2)_{{o}}^{low}$"
+    elseif name == "domaingap_22_B_high"
+        L"$\mathrm{certificate}(2,2)_{{o}}^{high}$"
+    elseif name == "domaingap_22_C_low"
+        L"$\mathrm{certificate}(2,2)_{{u}}^{low}$"
+    elseif name == "domaingap_22_C_high"
+        L"$\mathrm{certificate}(2,2)_{{u}}^{high}$"
+
+    elseif name == "binary_certificate_A_low"
+        L"$\mathrm{certificate}_{{p}_{\mathcal{T}}}^{low}$"
+    elseif name == "binary_certificate_A_high"
+        L"$\mathrm{certificate}_{{p}_{\mathcal{T}}}^{high}$"
+    elseif name == "binary_certificate_B_low"
+        L"$\mathrm{certificate}_{{o}}^{low}$"
+    elseif name == "binary_certificate_B_high"
+        L"$\mathrm{certificate}_{{o}}^{high}$"
+    elseif name == "binary_certificate_C_low"
+        L"$\mathrm{certificate}_{{u}}^{low}$"
+    elseif name == "binary_certificate_C_high"
+        L"$\mathrm{certificate}_{{u}}^{high}$"
+    else
+        name
+    end
+end
+
+function _mapping_names_multiclass(name)
     if name == "proportional_estimate_B"
         L"$\mathrm{proportional}_{\mathbf{o}}$"
     elseif name == "proportional_estimate_C"
         L"$\mathrm{proportional}_{\mathbf{u}}$"
+    elseif name == "proportional"
+        L"$\mathrm{proportional}_{\mathbf{p}_{\mathcal{T}}}$"
+
     elseif name == "domaingap_1Inf_A_low"
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
     elseif name == "domaingap_1Inf_A_high"
@@ -206,22 +272,6 @@ function _mapping_names(name)
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{low}$"
     elseif name == "domaingap_1Inf_C_high"
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{high}$"
-
-    elseif name == "proportional"
-        L"$\mathrm{proportional}_{\mathbf{p}_{\mathcal{T}}}$"
-
-    elseif name == "domaingap_1Inf_empirical_A_low"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
-    elseif name == "domaingap_1Inf_empirical_A_high"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
-    elseif name == "domaingap_1Inf_empirical_B_low"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
-    elseif name == "domaingap_1Inf_empirical_B_high"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
-    elseif name == "domaingap_1Inf_empirical_C_low"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
-    elseif name == "domaingap_1Inf_empirical_C_high"
-        L"$\mathrm{domaingap}_{noPAC}(\infty, 1)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
 
     elseif name == "domaingap_Inf1_A_low"
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
@@ -236,19 +286,6 @@ function _mapping_names(name)
     elseif name == "domaingap_Inf1_C_high"
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{u}}^{high}$"
 
-    elseif name == "domaingap_Inf1_empirical_A_low"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
-    elseif name == "domaingap_Inf1_empirical_A_high"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
-    elseif name == "domaingap_Inf1_empirical_B_low"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
-    elseif name == "domaingap_Inf1_empirical_B_high"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
-    elseif name == "domaingap_Inf1_empirical_C_low"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
-    elseif name == "domaingap_Inf1_empirical_C_high"
-        L"$\mathrm{domaingap}_{noPAC}(1, \infty)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
-    
     elseif name == "domaingap_22_A_low"
         L"$\mathrm{certificate}(2,2)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
     elseif name == "domaingap_22_A_high"
@@ -262,20 +299,21 @@ function _mapping_names(name)
     elseif name == "domaingap_22_C_high"
         L"$\mathrm{certificate}(2,2)_{\mathbf{u}}^{high}$"
 
-    elseif name == "domaingap_22_empirical_A_low"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{low}}$"
-    elseif name == "domaingap_22_empirical_A_high"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{A}}^{\sigma_{high}}$"
-    elseif name == "domaingap_22_empirical_B_low"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{low}}$"
-    elseif name == "domaingap_22_empirical_B_high"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{B}}^{\sigma_{high}}$"
-    elseif name == "domaingap_22_empirical_C_low"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{low}}$"
-    elseif name == "domaingap_22_empirical_C_high"
-        L"$\mathrm{domaingap}_{noPAC}(2, 2)_{\mathbb{E}_{C}}^{\sigma_{high}}$"
-
+    elseif name == "binary_certificate_A_low"
+        L"$\mathrm{certificate}_{\mathbf{p}_{\mathcal{T}}}^{low}$"
+    elseif name == "binary_certificate_A_high"
+        L"$\mathrm{certificate}_{\mathbf{p}_{\mathcal{T}}}^{high}$"
+    elseif name == "binary_certificate_B_low"
+        L"$\mathrm{certificate}_{\mathbf{o}}^{low}$"
+    elseif name == "binary_certificate_B_high"
+        L"$\mathrm{certificate}_{\mathbf{o}}^{high}$"
+    elseif name == "binary_certificate_C_low"
+        L"$\mathrm{certificate}_{\mathbf{u}}^{low}$"
+    elseif name == "binary_certificate_C_high"
+        L"$\mathrm{certificate}_{\mathbf{u}}^{high}$"
     else
         name
     end
 end
+
+

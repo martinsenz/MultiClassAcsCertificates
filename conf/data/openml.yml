@@ -1,7 +1,15 @@
 
-
 # https://www.openml.org/search?type=data&status=active&id=40685
 shuttle:
+  id: 40685 # dataset id from openml
+
+shuttleBinary:
+  id: 40685 # dataset id from openml
+  classes:
+    - [1,2]
+    - [3,4,5,6,7]
+
+shuttleMC:
   id: 40685 # dataset id from openml
   # merging classes
   classes:
@@ -9,115 +17,288 @@ shuttle:
     - [3] # [...] class 2
     - [4,5,6,7] # [...] class 3
 
+
 # https://www.openml.org/search?type=data&status=active&id=28
 optdigits:
+  id: 28
+
+optdigitsBinary:
+  id: 28
+  classes: 
+    - [1,2,3,4,5,6,7]
+    - [8,9,10]
+
+optdigitsMC:
   id: 28
   classes: 
     - [1,2,3,4,5,6,7]
     - [8,9]
     - [10]
 
+
 # https://www.openml.org/search?type=data&status=active&id=182&sort=runs
-satimage:
+# satimage:
+#   id: 182
+
+satimageBinary:
+  id: 182
+  classes:
+    - [1,2,3,4,5]
+    - [6,7]
+
+satimageMC:
   id: 182
   classes: 
     - [1,2,3]
     - [4,5]
     - [6,7]
 
+
 # https://www.openml.org/search?type=data&status=active&id=32&sort=runs
-pendigits:
+# pendigits:
+#   id: 32
+
+pendigitsBinary:
+  id: 32
+  classes:
+    - [1,2,3,4,5,6,7]
+    - [8,9,10]
+
+pendigitsMC:
   id: 32
   classes: 
     - [1,2,3,4,5,6,7]
     - [8,9]
     - [10]
 
-waveform_5000:
-  id: 60
 
 # https://www.openml.org/search?type=data&status=active&id=271&sort=runs
-bng:
+waveform:
   id: 271
+
+waveformBinary:
+  id: 271
+  classes:
+    - [1,2]
+    - [3]
+
+waveformMC:
+  id: 271
+  classes:
+    - [1]
+    - [2]
+    - [3]
+
 
 # https://www.openml.org/search?type=data&status=active&id=1044&sort=runs
 eyemovements:
   id: 1044
 
+eyemovementsBinary:
+  id: 1044
+  classes:
+    - [1]
+    - [2,3]
+
+eyemovementsMC:
+  id: 1044
+  classes:
+    - [1]
+    - [2]
+    - [3]
+
+
 # https://www.openml.org/search?type=data&sort=qualities.NumberOfClasses&status=any&qualities.NumberOfClasses=gte_2&format=ARFF&order=desc&id=40668
 connect4:
   id: 40668
+
+connect4Binary:
+  id: 40668
+  classes:
+    - [1,2]
+    - [3]
+
+connect4MC:
+  id: 40668
+  classes:
+    - [1]
+    - [2]
+    - [3]
+
 
 # https://www.openml.org/search?type=data&status=active&id=40670&sort=runs
 dna:
   id: 40670
 
+dnaBinary:
+  id: 40670
+  classes:
+    - [1,2]
+    - [3]
+
+dnaMC:
+  id: 40670
+  classes:
+    - [1]
+    - [2]
+    - [3]
+
+
 # https://www.openml.org/search?type=data&status=active&id=1497&sort=runs
-wall_robot_navigation:
+wallrobot:
+  id: 1497
+
+wallrobotBinary:
+  id: 1497
+  classes:
+    - [1,2]
+    - [3,4]
+
+wallrobotMC:
   id: 1497
   classes:
     - [1]
     - [2]
     - [3,4]
 
+
 # https://www.openml.org/search?type=data&status=active&id=42718&sort=runs
-bng_vehicle:
+vehicle:
+  id: 42718
+
+vehicleBinary:
+  id: 42718
+  classes:
+    - [1,2,3]
+    - [4]
+
+vehicleMC:
   id: 42718
   classes: 
     - [1,2]
     - [3]
     - [4]  
 
+
 # https://www.openml.org/search?type=data&status=active&id=41168&sort=runs
 jannis:
+  id: 41168
+
+jannisBinary:
+  id: 41168
+  classes:
+    - [1,2]
+    - [3,4]
+
+jannisMC:
   id: 41168
   classes:
     - [1]
     - [2]
     - [3,4]
 
+
 # https://www.openml.org/search?type=data&status=active&id=1568&sort=runs
 nursery:
+  id: 1568
+
+nurseryBinary:
+  id: 1568
+  classes:
+    - [1,2]
+    - [3,4]
+
+nurseryMC:
   id: 1568
   classes:
     - [1]
     - [2]
     - [3,4]
 
+
 # https://www.openml.org/search?type=data&status=active&id=30&sort=runs
-page_blocks:
+pageblocks:
+  id: 30
+
+pageblocksBinary:
+  id: 30
+  classes:
+    - [1]
+    - [2,3,4,5]
+
+pageblocksMC:
   id: 30
   classes:
     - [1]
     - [2]
     - [3,4,5]
 
+
 # https://www.openml.org/search?type=data&status=active&id=41163&sort=runs
 dilbert:
+  id: 41163
+
+dilbertBinary:
+  id: 41163
+  classes:
+    - [1,2,3]
+    - [4,5]
+
+dilbertMC:
   id: 41163
   classes:
     - [1,2]
     - [3,4]
     - [5]
 
+
 # https://www.openml.org/search?type=data&status=active&id=1478&sort=runs
 har:
+  id: 1478
+  
+harBinary:
+  id: 1478
+  classes:
+  - [1,2,3]
+  - [4,5,6] 
+
+harMC:
   id: 1478
   classes:
     - [1,2]
     - [3,4]
     - [5,6]
 
+
 # https://www.openml.org/search?type=data&status=active&id=1475&sort=runs
-first_order_theorem_proving:
+theoremproving:
+  id: 1475
+
+theoremprovingBinary:
+  id: 1475
+  classes:
+    - [1,2,3,4]
+    - [5,6]  
+
+theoremprovingMC:
   id: 1475
   classes:
     - [1,2]
     - [3,4]
     - [5,6]
 
+
 # https://www.openml.org/search?type=data&status=active&id=40498&sort=runs
-wine_quality_white:
+winequalitywhite:
+  id: 40498
+
+winequalitywhiteBinary:
+  id: 40498
+  classes:
+    - [1,2]
+    - [3,4,5,6,7]
+
+winequalitywhiteMC:
   id: 40498
   classes:
     - [1]

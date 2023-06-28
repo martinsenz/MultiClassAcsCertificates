@@ -1,0 +1,78 @@
+
+job: acquisition
+writepath: "res/experiments/acquisition_multiclass.csv"
+
+data:
+  - optdigitsMC
+  - satimageMC
+  - pendigitsMC
+  - eyemovementsMC
+  - shuttleMC
+  - connect4MC
+  - waveformMC
+  - dnaMC
+  - wallrobotMC
+  - vehicleMC
+  - jannisMC
+  - nurseryMC
+  - pageblocksMC
+  - dilbertMC
+  - harMC
+  - theoremprovingMC
+  - winequalitywhiteMC
+
+strategy:
+  - random
+  - uniform
+  - inverse # Lomasky et al: utility ∝ 1 / class-wise accuracy
+  - improvement # Lomasky et al: utility ∝ improvement in class-wise accuracy
+  - redistriction # Lomasky et al: utility ∝ number of samples for which the prediction changes
+  - proportional # Lomasky et al: utility ∝ pY_tst
+  - proportional_estimate
+  - domaingap_plus_1Inf 
+  - domaingap_plus_22
+  - domaingap_plus_Inf1
+
+initial_trainingsize: 60
+batchsize: 30
+n_batches: 10
+pY_T: [0.7, 0.2, 0.1]
+
+estimate_pY_T:
+  A_low:
+    [14.387542115748195, 3.8703637406512574, 2.7694662073336844] # alpha
+    # mean [0.684229207156278, 0.18406312157888, 0.1317076712648419]
+    # var [0.009808687055606578, 0.0068180574795296605, 0.005191756886111846]
+  A_high: 
+    [7.899646338259085, 2.084806890568132, 2.0547580922750104]
+    # mean [0.6561597871791363, 0.17316806184088657, 0.17067215097997723]
+    # var [0.017302742881622025, 0.010980793291342572, 0.01085519395109245] 
+  B_low: 
+    [17.161071363877603, 2.2666703557889467, 2.62379914012208]
+    # [0.7782254978458724, 0.10278965856405343, 0.11898484359007418]
+    # [0.007487159899557319, 0.004000771367835772, 0.004547524663255025]
+  B_high: 
+    [10.740962063330857, 1.7419657976874172, 2.128268842615437]
+    # [0.7351185725026649, 0.11922129535455515, 0.14566013214277992]
+    # [0.012473051269604823, 0.0067264271972241035, 0.00797141054650615]
+  C_low: 
+    [14.115751563994916, 6.891906089894918, 3.138224604457167]
+    # [0.5846028491717356, 0.2854278015669712, 0.1299693492612933]
+    # [0.009657340928311024, 0.00811102070566302, 0.004496852262018129]
+  C_high: 
+    [7.098578975569465, 3.264872072251279, 2.2658393499033465]
+    # [0.5620726701199847, 0.2585158761445249, 0.1794114537354902]
+    # [0.018060146672440026, 0.014064225820425871, 0.010801955179456188]
+
+clf:
+  - sklearn.neural_network.MLPClassifier
+
+loss:
+  - ZeroOneLoss
+
+delta:
+  - 0.05
+
+rskf:
+  n_repeats: 5 # yields 15 repetitions due to n_splits=3
+  random_state: 123

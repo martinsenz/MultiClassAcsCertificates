@@ -4,7 +4,7 @@
     
 Performs the tightness experiments from Table 2 and produce ternary plots (included Fig.1, Fig.2)
 """
-function tightness(config_path::String="conf/exp/tightness.yml")
+function tightness(config_path::String)
     config = parsefile(config_path)
     @info "Read the configuration at $config_path"
     config["rskf"]["n_splits"] = 3 
@@ -27,7 +27,11 @@ function _tightness_trial(config)
     @info "Trial $(config["trial_nr"]): $(config["method"]) with classifier=$(clf_name), loss=$(config["loss"]) and δ=$(config["delta"]) on dataset=$(config["data"])"
     rskf = SkObject("sklearn.model_selection.RepeatedStratifiedKFold", config["rskf"])
     Random.seed!(config["rskf"]["random_state"]) 
-    clf = SkObject(config["clf"])
+    if config["clf"] == "sklearn.neural_network.MLPClassifier"
+        clf = SkObject(config["clf"], Dict("random_state" => 123, "solver" => "adam"))
+    else
+        clf = SkObject(config["clf"])
+    end
 
     # load dataset 
     d = Data.dataset(config["data"])
@@ -35,10 +39,13 @@ function _tightness_trial(config)
     y = Data.y_data(d)
     classes = Data.classes(d)
 
-    # generate random test points 
-    dirichlet = config["pY_tst"]
-    pY_T = Data.dirichlet_pY(dirichlet["n_samples"]; α=fill(0.5, length(classes)), margin=dirichlet["margin"], seed=dirichlet["seed"])
-    #pY_T = transpose(rand(MersenneTwister(dirichlet["seed"]), Dirichlet([1.,1.,1.]), dirichlet["n_samples"]))
+    # generate random test points
+    if length(classes) > 2
+        dirichlet = config["pY_tst"]
+        pY_T = Data.dirichlet_pY(dirichlet["n_samples"]; α=fill(0.5, length(classes)), margin=dirichlet["margin"], seed=dirichlet["seed"])
+    else
+        pY_T = _logarithmic_pY_T_sampling(Data.class_proportion(y, classes), config["pY_tst"]["n"])
+    end
 
     # result dataframe 
     df = DataFrame(
@@ -52,7 +59,7 @@ function _tightness_trial(config)
         pY_S=Array{Float64, 1}[], # class proportion of the source domain
         pY_T=Array{Float64, 1}[], # class proportion of the target domain
         emp_loss_val=Float64[], # empirical loss of the source domain
-        emp_loss_tst=Float64[], # empirical loss of the target domain 
+        emp_loss_tst=Float64[], # empirical loss of the target domain
         ϵ_val=Float64[], # estimation error source data
         ϵ_tst=Float64[], # estimation error target data 
         ℓNorm=Float64[], # empirical classwise loss 
@@ -71,22 +78,29 @@ function _tightness_trial(config)
         # weights
         pY_S = Data.class_proportion(y[trn_val], classes)
         w_y = _class_weights(pY_S, config["weight"])
-        w_trn = MultiClassAcsCertificates.Util.compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
 
         # train classifier
-        ScikitLearn.fit!(clf, X[trn,:], y[trn]; sample_weight=w_trn)
+        if config["clf"] === "sklearn.neural_network.MLPClassifier"
+            ScikitLearn.fit!(clf, X[trn,:], y[trn])
+        else
+            w_trn = MultiClassAcsCertificates.Util.compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
+            ScikitLearn.fit!(clf, X[trn,:], y[trn]; sample_weight=w_trn)
+        end
         y_h_val = ScikitLearn.predict(clf, X[val,:])
         y_h_tst = ScikitLearn.predict(clf, X[tst,:])
 
         # estimate source loss
         L = getproperty(LossFunctions, Symbol(config["loss"]))()
-        L_S_empirical = sum(Certification.empirical_classwise_risk(L, y_h_val, y[val], classes) .* w_y .* pY_S)
+        L_S_classwise = Certification.empirical_classwise_risk(L, y_h_val, y[val], classes) .* w_y
+        L_S_empirical = sum(L_S_classwise .* pY_S)
         ϵ_val = Certification._ϵ(length(y[val]) * config["sample_size_multiplier"], config["delta"])
 
         # set up certification method
         certificate = nothing
         if config["method"] === "SignedCertificate"
             certificate = Certification.SignedCertificate(L, y_h_val, y[val]; δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"])
+        elseif config["method"] === "BinaryCertificate"
+            certificate = Certification.BinaryCertificate(L, Data._binary_labels(y_h_val), Data._binary_labels(y[val]); δ=config["delta"])
         else
             hoelder_conjugate = ""
             if occursin("Inf_1", config["method"])
@@ -106,14 +120,20 @@ function _tightness_trial(config)
         # test the certificate for a variety of points
         for pY_tst in eachrow(pY_T)
             # predict the domain induced error for a given label shift
-            ϵ_cert = domaingap_error(certificate, pY_tst; variant_plus=variant_plus)
+            ϵ_cert = begin
+                if isa(certificate, Certification.NormedCertification)
+                    domaingap_error(certificate, pY_tst; variant_plus=variant_plus)
+                else
+                    domaingap_error(certificate, pY_tst)
+                end
+            end
             ℓNorm = Inf
             ℓNormBounded = Inf
             ϵ_lower = Inf
 
             if config["method"] === "SignedCertificate"
                 ϵ_lower, ϵ_cert = ϵ_cert 
-            else
+            elseif isa(certificate, Certification.NormedCertification)
                 ℓNorm = certificate.ℓNorm
                 ℓNormBounded = certificate.ℓNormBounded
             end
@@ -123,18 +143,40 @@ function _tightness_trial(config)
             y_pY = y[tst][i_pY]
             y_h_pY = y_h_tst[i_pY]
             w_y_tst = _class_weights(pY_tst, config["weight"])
-            L_T_empirical = sum(Certification.empirical_classwise_risk(L, y_h_pY, y_pY, classes) .* w_y_tst .* pY_tst)
+            L_T_classwise = Certification.empirical_classwise_risk(L, y_h_pY, y_pY, classes) .* w_y_tst
+            L_T_empirical = sum(L_T_classwise .* pY_tst)
             δ_tst = config["delta"] * 2 # needed for a fair comparison
             ϵ_tst = Certification._ϵ(length(y_pY) * config["sample_size_multiplier"], δ_tst)
+            # check_instances(y_pY, classes)
             
             # update results 
             df_row = [i_rskf, config["data"], config["loss"], config["clf"], config["delta"], config["weight"], config["method"],
-                        pY_S, pY_tst, L_S_empirical, L_T_empirical, ϵ_val, ϵ_tst, ϵ_lower, ℓNorm, ℓNormBounded, ϵ_cert]
-        
+                        pY_S, pY_tst,L_S_empirical, L_T_empirical, ϵ_val, ϵ_tst, ℓNorm, ℓNormBounded, ϵ_lower, ϵ_cert]
             push!(df, df_row)
         end
     end
     df
+end
+
+# n logarithmically equidistant steps between l and u
+_logspace(l::Real, u::Real, n::Int) = 10. .^ (log10(l):((log10(u)-log10(l))/(n-1)):log10(u))
+
+function _logarithmic_pY_T_sampling(pY_S::Vector{Float64}, n_steps::Int64)
+    pY = pY_S[2]
+    if (pY >= 0.0) & (pY < 0.34)
+        l = 0.01
+        u = 0.5
+    elseif (pY >= 0.34) & (pY < 0.66)
+        l = 0.25
+        u = 0.75
+    elseif (pY >= 0.66) & (pY <= 1.0)
+        l = 0.99
+        u = 0.50
+    end
+    pY_tst = _logspace(l,u,n_steps)
+    pY_diff = pY_tst .- pY
+    pY_tst .-= pY_diff[argmin(abs.(pY_diff))]
+    hcat(1.0.-pY_tst, pY_tst)
 end
 
 function _stratified_split(X, y, trn_val)
@@ -151,4 +193,12 @@ function _class_weights(pY, weight)
         "sqrt" => sqrt.(ones ./ pY)
     )[weight]
     return w_y ./ maximum(w_y) # w_y ∈ [0, 1]
+end
+
+function check_instances(y, classes, min_instances=20)
+    for class in classes
+        if sum(y .== class) < min_instances
+            @warn "For class $(class) there exist only $(sum(y .== class)) instances."
+        end
+    end
 end

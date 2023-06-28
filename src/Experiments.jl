@@ -14,7 +14,10 @@ using
     DataFrames,
     Distributed,
     CSV,
-    PyCall
+    PyCall,
+    Discretizers
+
+import AcsCertificates.Certificates: beta_parameters, suggest_acquisition
 
 # ignore all convergence warnings
 warnings = pyimport("warnings")

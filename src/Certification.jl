@@ -6,7 +6,8 @@ using JuMP
 using NLopt
 using AcsCertificates.Certificates: Δℓ_MaxMin, OneSided_Δℓ_MinMax, Δℓ_MinMax, Δℓ_Objective, _optimize_Δℓ, objective_value, value,
                                     is_feasible, effective_δ, onesided, optimize_Δℓ
-export domaingap_error, empirical_classwise_risk, NormedCertificate, p_range, _ϵ
+using AcsCertificates
+export domaingap_error, empirical_classwise_risk, NormedCertificate, p_range, _ϵ, BinaryCertificate
 
 # one-sided maximum error with probability at least 1-δ
 _ϵ(m, δ) = sqrt(-log(δ) / (2*m))
@@ -28,6 +29,25 @@ end
 
 # supertype of the normed certifications
 abstract type NormedCertification end
+
+"""
+    BinaryCertificate(L, y_h, y)
+
+A warpper for the binary Certificate from AcsCertificates repository. 
+See https://github.com/mirkobunse/AcsCertificates.jl/blob/main/src/Certificates.jl for implementation and further documentation.
+
+"""
+struct BinaryCertificate
+    Δℓ :: AcsCertificates.Certificates.Δℓ_Result
+    pY_S :: AbstractArray{Float64}
+    function BinaryCertificate(L::SupervisedLoss,y_h::AbstractArray, y::AbstractArray; kwargs...)
+        if !any(yi -> yi ∈ [-1,1], y)
+            @warn "The binäry class labels for this method are expected in [-1,1]."
+            return 
+        end
+        new(AcsCertificates.Certificate(L, y_h, y; kwargs...).Δℓ, Data.class_proportion(y, [-1,1]))
+    end
+end
 
 """
     SignedCertificate(L, y_h, y) 
@@ -295,6 +315,10 @@ end
 
 Prediction of the ACS-induced error by a given label shift.
 """
+function domaingap_error(c::BinaryCertificate, pY_T)
+    c.Δℓ * abs(pY_T[1] - c.pY_S[2])
+end
+
 function domaingap_error(c::SignedCertificate, pY_T)
 
     # decompose into positive and negative loss

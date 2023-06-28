@@ -8,6 +8,7 @@ using Random
 using StatsBase
 using Distances
 using PyCall
+using AcsCertificates.Data: retrieve
 
 fetch_openml(args...; kwargs...) = pyimport("sklearn.datasets").fetch_openml(args...; kwargs...)
 MinMaxScaler(args...; kwargs...) = pyimport("sklearn.preprocessing").MinMaxScaler(args...; kwargs...)
@@ -43,6 +44,8 @@ function OpenmlDataSet(name::String; config::Dict{String,Any} = parsefile("conf/
     return DataSet(X, y, catdisc)
 end
 
+binary_imbalance = ["fact_balanced", "fact_imbalanced", "protein_homo", "pen_digits", "letter_img", "satimage", "coil_2000", "optical_digits"]
+
 function _merge_classes(y, lb_classes)
     for (i, _) in enumerate(y)
         for (merged_label, classes) in enumerate(lb_classes)
@@ -62,6 +65,10 @@ Return the DataSet object with the given `name`.
 function dataset(name::String; kwargs...)
     if name in keys(parsefile("conf/data/openml.yml"))
         return OpenmlDataSet(name; kwargs...)
+    elseif name ∈ binary_imbalance
+        X,y = retrieve(name)
+        catdisc = CategoricalDiscretizer(y)
+        return DataSet(X,Vector(encode(catdisc, y)),catdisc)
     else
         throw(KeyError(name))
     end
@@ -109,6 +116,28 @@ function sample_indices(y, pY, classes; num_samples=length(y), seed::Integer = c
     StatsBase.sample(MersenneTwister(seed), 1:length(y), Weights(weighted_pY[y]), num_samples, replace=true)
 end
 
+function mle_dirichlet(mean_vector, variance; n_samples=1000, margin=0.01)
+    if length(mean_vector) == 3
+        pop!(mean_vector)
+    end
+    normal_distr = Distributions.MvNormal(mean_vector, Matrix(variance*I, 2,2))
+    X = transpose(rand(normal_distr, n_samples))
+    filter_idx = (X[:,1] .>= margin) .& (X[:,2] .>= margin)
+    X = X[filter_idx,:]
+    diff_vec = fill(1.0, size(X,1)) .- X[:,1] .- X[:,2]
+    diff_id = diff_vec .>= margin
+    w = max.(0.0, map(x -> Distributions.logpdf(normal_distr, x), eachrow(X[diff_id,:])))
+    X = hcat(X[diff_id,:], diff_vec[diff_id,:])
+    @info "Sampled points mean $(mean(X, dims=1))"
+    @info "Sampled points variance $(var(X, dims=1))"
+
+    d = fit_mle(Distributions.Dirichlet, transpose(X), w)
+    @info "Dirichlet alpha: $(d.alpha)"
+    @info "Dirichlet mean: $(mean(d))"
+    @info "Dirichlet var: $(var(d))"
+    d.alpha
+end
+
 # generates random drawn class proportions 
 function dirichlet_pY(n_samples; α=[0.5,0.5,0.5], margin=0.05, seed::Integer=convert(Int, rand(UInt32)))
     P = transpose(rand(MersenneTwister(seed), Dirichlet(α), n_samples))
@@ -123,6 +152,8 @@ function dirichlet_pY(n_samples; α=[0.5,0.5,0.5], margin=0.05, seed::Integer=co
 end
 
 _relabeling(y, labels) = replace(y_i -> y_i == y ? 1 : -1, labels)
+
+_binary_labels(x) = map(y -> y==1 ? 1 : -1, x)
 
 function _m_y_from_proportion(pY, m::Int64)
     m_y = round.(Int, pY .* m)

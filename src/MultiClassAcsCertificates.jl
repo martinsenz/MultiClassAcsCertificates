@@ -1,13 +1,14 @@
 __precompile__(false)
 module MultiClassAcsCertificates
 using PyCall
+using MetaConfigurations
 export Data
 export Certification
 export Util
 export Experiments
 export Plots
 export SkObject
-export NormedCertificate, SignedCertificate, DomainGap
+export NormedCertificate, SignedCertificate, BinaryCertificate, DomainGap
 
 
 # function __init__()
@@ -54,8 +55,8 @@ using .Experiments
 Conduct certification experiments for multi-class problems and produce Table 1.
 """
 function certify(config_path="conf/exp/certify.yml")
-    Experiments.certify(config_path)
-    Plots.certify()
+    #Experiments.certify(config_path)
+    Plots.certify(parsefile(config_path)["writepath"])
 end
 
 """
@@ -63,9 +64,9 @@ end
 
 Conduct tightness exoeriments to produce Table 2 Fig.1 and Fig.2
 """
-function tightness(config_path="conf/exp/tightness.yml", standalone=true, full_table=false)
+function tightness(config_path::String)
     Experiments.tightness(config_path)
-    Plots.tightness(standalone, full_table)
+    Plots.tightness(parsefile(config_path)["writepath"])
 end
 
 function acquisition(config_path="conf/exp/acquisition.yml")
