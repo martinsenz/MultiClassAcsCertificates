@@ -47,8 +47,9 @@ d = Beta(alpha, beta)
 @info "mean d = $(mean(d))"
 @info "var d = $(var(d))"
 
-
-
+# # # # # # #
+# Multiclass 
+# # # # # # # 
 variance_low = 0.01
 variance_high = 0.1
 
