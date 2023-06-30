@@ -1,6 +1,7 @@
 job: acquisition
 writepath: "res/experiments/acquistion_binary.csv"
 
+# datasets used
 data:
   - optdigitsBinary
   - satimageBinary
@@ -20,6 +21,7 @@ data:
   - theoremprovingBinary
   - winequalitywhiteBinary
 
+# ACS strategies
 strategy:
   - random
   - uniform
@@ -27,8 +29,8 @@ strategy:
   - improvement # Lomasky et al: utility ∝ improvement in class-wise accuracy
   - redistriction # Lomasky et al: utility ∝ number of samples for which the prediction changes
   - proportional # Lomasky et al: utility ∝ pY_tst
-  - proportional_estimate
-  # - binary_certificate
+  - proportional_estimate # proportional strategy with expected value != pY_T
+  - binary_certificate #
 
 # how many batches of which size to acquire during the ACS loop
 batchsize: 30
@@ -38,6 +40,7 @@ initial_trainingsize: 60
 # how to sub-sample the test set
 pY_T: [0.2, 0.8]  # [1-pY_tst, pY_tst]
 
+# class prior settings
 estimate_pY_T:
   A_low: 
     [50.4, 12.6] # [alpha,beta]
@@ -72,8 +75,13 @@ clf:
 loss:
   - ZeroOneLoss
 
-delta:
+# parameters of the binary_certificate
+delta: # probability budget
   - 0.05
+n_trials: 3 # number of optimization trials
+n_trials_extra: 7 # allow more trials if 3 random initializations fail
+allow_onesided: false # acquisition certificates must be two-sided
+warn: false # whether to log warnings to the console
 
 # parameters for a RepeatedStratifiedKFold
 rskf:

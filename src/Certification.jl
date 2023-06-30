@@ -20,8 +20,8 @@ The class-wise risk of predictions `y_h` under the loss function `L`.
 function empirical_classwise_risk(L, y_h, y, classes) 
     classwise_risk = []  
     for y_i in classes
-        y_binary = Data._relabeling(y_i, y[y.==y_i])
-        ŷ_binary = Data._relabeling(y_i, y_h[y.==y_i])
+        y_binary = Data._binary_relabeling(y_i)
+        ŷ_binary = Data._binary_relabeling(y_i)
         push!(classwise_risk, LossFunctions.value(L, y_binary, ŷ_binary, AggMode.Mean()))
     end
     classwise_risk

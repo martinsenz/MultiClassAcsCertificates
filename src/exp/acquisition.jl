@@ -1,17 +1,26 @@
-function acquisition(config_path="conf/exp/acquisition.yml")
+function acquisition(config_path::String)
 
+    # prepare the experiment configurations
     config = parsefile(config_path)
     results_path = config["writepath"]
     config["rskf"]["n_splits"] = 3 
     config["sample_size_multiplier"] = config["rskf"]["n_splits"]
     experiments = expand(config, "data", "strategy", "estimate_pY_T", "clf", "loss", "delta")
-
     for exp in experiments
         if !(contains(exp["strategy"], "domaingap") || exp["strategy"] == "proportional_estimate" || exp["strategy"] == "binary_certificate")
             exp["estimate_pY_T"] = nothing
         end
         if exp["strategy"] == "proportional_estimate"
-            exp["estimate_pY_T"] = (exp["estimate_pY_T"][1][1:1], exp["estimate_pY_T"][2]) # no variance 
+            estimate_pY_T = begin
+                if length(exp["pY_T"]) == 2
+                    β, α = exp["estimate_pY_T"][2]
+                    pY = mean(Distributions.mean(Beta(α, β)))
+                    vcat(pY, 1.0 - pY)
+                else
+                    mean(Distributions.Dirichlet(exp["estimate_pY_T"][2]))
+                end
+            end
+            exp["estimate_pY_T"] = (exp["estimate_pY_T"][1][1:1], estimate_pY_T) # no variance for proportional_estimate 
         end
         exp["name"] = exp["strategy"]
         if contains(exp["strategy"], "domaingap") || exp["strategy"] == "proportional_estimate" || exp["strategy"] == "binary_certificate"
@@ -21,7 +30,7 @@ function acquisition(config_path="conf/exp/acquisition.yml")
     unique!(experiments)
     @info "There are $(length(experiments)) combinations."
     for (i, exp) in enumerate(experiments)
-        exp["info"] = "Trial $(i): $(exp["name"]), classifier=$(exp["clf"]) on dataset=$(exp["data"]))"
+        exp["info"] = "Trial $(i): $(exp["name"]), classifier=$(exp["clf"]) on dataset=$(exp["data"])"
     end
     df = vcat(pmap(exp -> _acquisition(exp), experiments)...)
     @info "Writing results" results_path
@@ -48,14 +57,14 @@ function _acquisition(config)
     L = getproperty(LossFunctions, Symbol(config["loss"]))()
 
     df = DataFrame(
-        i_rskf   = Int[], # iteration of the rskf
+        i_rskf = Int[], # iteration of the rskf
         name = String[], # strategy name
-        batch    = Int[], # number of the ACS acquisition batch
-        N_1    = Int[], # number of class 1 training set instances
-        N_2    = Int[], # number of class 2 training set instances
-        N_3    = Int[], # number of class 3 training set instances
-        pY_trn  = Array{Float64, 1}[], 
-        L_tst    = Float64[] # training set loss
+        batch = Int[], # number of the ACS acquisition batch
+        N_1 = Int[], # number of class 1 training set instances
+        N_2 = Int[], # number of class 2 training set instances
+        N_3 = Int[], # number of class 3 training set instances
+        pY_trn = Array{Float64, 1}[], 
+        L_tst = Float64[] # training set loss
     )
     seeds = rand(UInt32, rskf.get_n_splits())
 
@@ -122,7 +131,7 @@ function _acquisition(config)
     return df
 end
 
-# gibt Strategyempfehlung zurück in Form von Batches
+# acquisition suggestions from ACS strategies
 function _m_d(L, y_h, y, config)
     if config["strategy"] == "uniform"
         return fill(config["batchsize"] / config["n"], config["n"])
@@ -134,9 +143,7 @@ function _m_d(L, y_h, y, config)
         m_d = p_d .* (length(y) + config["batchsize"])
         return m_d - Data.class_counts(y, config["classes"])
     elseif config["strategy"] == "proportional_estimate"
-        # m_d = config["estimate_pY_T"][2].* (length(y) + config["batchsize"])
-        expected_value = Distributions.mean(Distributions.Dirichlet(config["estimate_pY_T"][2]))
-        m_d = expected_value.* (length(y) + config["batchsize"])
+        m_d = config["estimate_pY_T"][2] .* (length(y) + config["batchsize"])
         return m_d .- Data.class_counts(y, config["classes"])
     elseif config["strategy"] == "inverse"
         empirical_ℓ_y = min.(1-1e-4, max.(1e-4, empirical_classwise_risk(L, y_h, y, config["classes"])))
@@ -158,7 +165,6 @@ function _m_d(L, y_h, y, config)
         else
             N = length(config["__cache__"]) # number of samples in previous iteration
             is_redistricted = sign.(y_h[1:N]) .!= config["__cache__"]
-            # utility = [sum(is_redistricted[y[1:N].==1]), sum(is_redistricted[y[1:N].==2]), sum(is_redistricted[y[1:N].==3])]
             utility = []
             for class in config["classes"]
                 push!(utility, sum(is_redistricted[y[1:N].==class]))
@@ -170,29 +176,22 @@ function _m_d(L, y_h, y, config)
         pac_bounds = !contains(config["strategy"], "empirical")
         plus = contains(config["strategy"], "plus")
         conjugate = _extract_hoelder_conjugate(config["strategy"])
-        c = Certification.NormedCertificate(L, y_h, y; hoelder_conjugate=conjugate, pac_bounds=pac_bounds, n_trials=3, delta=config["delta"])
-        
-        # cov_matrix = Matrix(config["estimate_pY_T"][2][2]*I,3,3)
-        # class_prior_distribution = Distributions.MvNormal(config["estimate_pY_T"][2][1], cov_matrix)
+        c = Certification.NormedCertificate(L, y_h, y; hoelder_conjugate=conjugate, pac_bounds=pac_bounds, n_trials=config["n_trials"], delta=config["delta"])
         class_prior_distribution = Distributions.Dirichlet(config["estimate_pY_T"][2])
         Strategy.suggest_acquisition(c, class_prior_distribution, config["batchsize"]; plus=plus)
     elseif config["strategy"] == "binary_certificate"
-        c = Certification.BinaryCertificate(L, Data._binary_labels(y_h), Data._binary_labels(y); 
+        c = Certification.BinaryCertificate(L, Data._binary_relabeling(y_h), Data._binary_relabeling(y); 
             δ=config["delta"],
-            warn=false,
-            n_trials=1,
-            allow_onesided=false, # acquisition certificates must be two-sided
-            n_trials_extra=1 # allow more trials if 3 random initializations fail
+            warn=config["warn"],
+            n_trials=config["n_trials"],
+            allow_onesided=config["allow_onesided"], # acquisition certificates must be two-sided
+            n_trials_extra=config["n_trials_extra"] # allow more trials if 3 random initializations fail
         )
-        #mean = config["estimate_pY_T"][2][1][2]
-        #var = config["estimate_pY_T"][2][2] 
-        α, β = config["estimate_pY_T"][2]
-        return suggest_acquisition(c.Δℓ, config["batchsize"], β, α)
+        β, α = config["estimate_pY_T"][2]
+        return suggest_acquisition(c.Δℓ, config["batchsize"], α, β)
     else
         throw(ValueError("Unknown strategy \"$strategy\""))
     end
-
-
 end
 
 function _sanitize_m_d(m_d, config)

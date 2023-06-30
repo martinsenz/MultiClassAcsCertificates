@@ -110,12 +110,6 @@ function class_counts(y, classes)
     counts
 end
 
-# not used
-function sample_indices(y, pY, classes; num_samples=length(y), seed::Integer = convert(Int, rand(UInt32)))
-    weighted_pY = pY ./ class_proportion(y, classes)
-    StatsBase.sample(MersenneTwister(seed), 1:length(y), Weights(weighted_pY[y]), num_samples, replace=true)
-end
-
 function mle_dirichlet(mean_vector, variance; n_samples=1000, margin=0.01)
     if length(mean_vector) == 3
         pop!(mean_vector)
@@ -138,7 +132,7 @@ function mle_dirichlet(mean_vector, variance; n_samples=1000, margin=0.01)
     d.alpha
 end
 
-# generates random drawn class proportions 
+# generates random drawn class proportions
 function dirichlet_pY(n_samples; α=[0.5,0.5,0.5], margin=0.05, seed::Integer=convert(Int, rand(UInt32)))
     P = transpose(rand(MersenneTwister(seed), Dirichlet(α), n_samples))
     classes = length(α)
@@ -151,9 +145,7 @@ function dirichlet_pY(n_samples; α=[0.5,0.5,0.5], margin=0.05, seed::Integer=co
     P
 end
 
-_relabeling(y, labels) = replace(y_i -> y_i == y ? 1 : -1, labels)
-
-_binary_labels(x) = map(y -> y==1 ? 1 : -1, x)
+_binary_relabeling(x) = map(y -> y==1 ? 1 : -1, x)
 
 function _m_y_from_proportion(pY, m::Int64)
     m_y = round.(Int, pY .* m)

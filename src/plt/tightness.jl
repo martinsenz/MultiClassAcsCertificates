@@ -18,16 +18,16 @@ function tightness(df_path::String="res/experiments/tightness.csv")
     df[!, "failures"] = df[!, "certification_bound"] .< df[!, "emp_loss_tst"]
     df[!, "distance_certification_tst_bound"] = abs.(df[!, "certification_bound"] .- df[!, "test_bound"])
     if n_classes == 2 
-        _correctness_table(df, "res/plots/certification/tex/" * "CorrectnessFullTable" * filename * ".tex")
-        _correctness_table(df, "res/plots/certification/tex/" * "Correctness" * filename * ".tex"; full_table=false)
-        _tightness_table(df, "res/plots/certification/tex/" * "madFullTable" * filename * ".tex")
-        _tightness_table(df, "res/plots/certification/tex/" * "madTable" * filename * ".tex"; full_table=false)
+        _correctness_table(df, "res/plots/certification/tex/" * "CorrectnessFullTable_" * filename * ".tex")
+        _correctness_table(df, "res/plots/certification/tex/" * "Correctness_" * filename * ".tex"; full_table=false)
+        _tightness_table(df, "res/plots/certification/tex/" * "MadFullTable_" * filename * ".tex")
+        _tightness_table(df, "res/plots/certification/tex/" * "MadTable_" * filename * ".tex"; full_table=false)
         _binary_tightness_plots(df, "res/plots/certification/tex/" * filename * ".tex")
     elseif n_classes == 3
-        _correctness_table(df, "res/plots/certification/tex/" * "CorrectnessFullTable" * filename * ".tex")
-        _correctness_table(df, "res/plots/certification/tex/" * "Correctness" * filename * ".tex"; full_table=false)
-        _tightness_table(df, "res/plots/certification/tex/" * "tightnessFullTable" * filename * ".tex")
-        _tightness_table(df, "res/plots/certification/tex/" * "tightnessTable" * filename * ".tex"; full_table=false)
+        _correctness_table(df, "res/plots/certification/tex/" * "CorrectnessFullTable_" * filename * ".tex")
+        _correctness_table(df, "res/plots/certification/tex/" * "Correctness_" * filename * ".tex"; full_table=false)
+        _tightness_table(df, "res/plots/certification/tex/" * "MadFullTable_" * filename * ".tex")
+        _tightness_table(df, "res/plots/certification/tex/" * "MadTable_" * filename * ".tex"; full_table=false)
         _ternary_plots(df, "$(filename).tex")
     else
         @info "The evaluation can currently be performed only under two or three classes!"
@@ -44,8 +44,6 @@ function _correctness_table(df::DataFrame, savepath::String; full_table=true, st
             combine(groupby(df, gid), "failures" => sum,"failures" => mean)
         end
     end
-
-    return df_agg
     
     # write to latex table
     classifiername = _classifier_names(df[!, "clf"][1])
@@ -405,7 +403,6 @@ function _ternary_predicted_domaingap(gap, pY_S_points, interpolate_function, sa
     tax.bottom_axis_label("C1", fontsize=fontsize, position=(0.79,0.05))
     ticks_labels = ["0.0", "0.1", "0.2", "0.3", "0.4", "0.5", "0.6", "0.7", "0.8", "0.9", "1.0"]
     tax.ticks(ticks=ticks_labels)
-    #tax.legend(loc="upper right")
     tax.clear_matplotlib_ticks()
     tax.get_axes().axis("off")
 

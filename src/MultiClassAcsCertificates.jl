@@ -4,18 +4,10 @@ using PyCall
 using MetaConfigurations
 export Data
 export Certification
-export Util
 export Experiments
 export Plots
 export SkObject
 export NormedCertificate, SignedCertificate, BinaryCertificate, DomainGap
-
-
-# function __init__()
-#     Conda.add_channel("conda-forge", priority=:never)
-# end
-
-
 
 """
     SkObject(class_name, configuration)
@@ -33,9 +25,6 @@ SkObject(class_name::AbstractString; kwargs...) =
 
 include("Data.jl")
 using .Data
-
-include("Util.jl")
-using .Util
 
 include("Plots.jl")
 using .Plots
@@ -71,16 +60,6 @@ end
 
 function acquisition(config_path="conf/exp/acquisition.yml")
     Experiments.acquisition(config_path)
-end
-
-"""
-    run_all_experiments()
-
-Conduct all experiments 
-"""
-function run_all_experiments()
-    certify()
-    tightness()
 end
 
 end

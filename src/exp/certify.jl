@@ -57,7 +57,7 @@ function _certify_trial(config)
 
         # weights
         w_y = _class_weights(pY_S, config["weight"])
-        w_trn = Util.compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
+        w_trn = compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
 
         # train classifier
         ScikitLearn.fit!(clf, X[trn,:], y[trn]; sample_weight=w_trn)

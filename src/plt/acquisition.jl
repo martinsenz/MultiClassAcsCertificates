@@ -1,12 +1,10 @@
 
-
 function acquisition(filename::String, strategy_selection::Vector{String}, loadpath;
                 base_output_dir="res/plots/acquisition/", standalone=true, color=["tu01", "tu02", "tu03", "tu04", "tu05"])
     
     df = CSV.read(loadpath, DataFrame)
     idx = map(strategy -> strategy ∈ strategy_selection ? true : false, df[!, "name"])
     df = df[idx, :]
-
     df[!, "pY_trn"] = eval.(Meta.parse.(df[!, "pY_trn"]))
     df[!, "pY_T"] = eval.(Meta.parse.(df[!, "pY_T"]))
     n_classes = length(df[!, "pY_T"][1])
@@ -22,8 +20,7 @@ function acquisition(filename::String, strategy_selection::Vector{String}, loadp
         "L_tst" => StatsBase.mean => "L_tst",
         "kl_unif" => StatsBase.mean => "kl_unif",
         "kl_prop" => StatsBase.mean => "kl_prop",
-        "pY_trn" => x -> mean(x,dims=1)
-    )
+        "pY_trn" => x -> mean(x,dims=1))
     if n_classes == 2
         _plot_kl_diagram(df, base_output_dir * "/tex/" *  filename * "_KL.tex"; gid=gid, standalone=standalone)
         df[!, "name"] = map(x -> _mapping_names_binary(x), df[!, "name"])
@@ -71,18 +68,19 @@ function _plot_critical_diagram(df, output_path, count_strategies; gid=["batch",
         "cycle list={{tu01,mark=*},{tu02,mark=square*},{tu03,mark=triangle*},{tu04,mark=diamond*},{tu05,mark=pentagon*},{gray, mark=diamond*}}",
         "width=\\axisdefaultwidth, height=\\axisdefaultheight"
     ], ", ")
-
-    PGFPlots.resetPGFPlotsPreamble()
-    PGFPlots.pushPGFPlotsPreamble(join([
-        "\\usepackage{amsmath}",
-        "\\usepackage{amssymb}",
-        "\\definecolor{tu01}{HTML}{84B818}",
-        "\\definecolor{tu02}{HTML}{D18B12}",
-        "\\definecolor{tu03}{HTML}{1BB5B5}",
-        "\\definecolor{tu04}{HTML}{F85A3E}",
-        "\\definecolor{tu05}{HTML}{4B6CFC}",
-        "\\definecolor{chartreuse(traditional)}{rgb}{0.87, 1.0, 0.0}"
-    ], "\n"))
+    if standalone
+        PGFPlots.resetPGFPlotsPreamble()
+        PGFPlots.pushPGFPlotsPreamble(join([
+            "\\usepackage{amsmath}",
+            "\\usepackage{amssymb}",
+            "\\definecolor{tu01}{HTML}{84B818}",
+            "\\definecolor{tu02}{HTML}{D18B12}",
+            "\\definecolor{tu03}{HTML}{1BB5B5}",
+            "\\definecolor{tu04}{HTML}{F85A3E}",
+            "\\definecolor{tu05}{HTML}{4B6CFC}",
+            "\\definecolor{chartreuse(traditional)}{rgb}{0.87, 1.0, 0.0}"
+        ], "\n"))
+    end
     PGFPlots.save(output_path, plot)
     @info "Print CD in $(output_path)"
 end
@@ -185,7 +183,7 @@ function _ternary_batch_proportions(df, output_path;
     tax.clear_matplotlib_ticks()
     tax.get_axes().axis("off")
     tax.savefig(output_path, transparent=true, pad_inches=0.0, bbox_inches="tight")
-    @info "Print ternary class prop in $(output_path)"
+    @info "Print ternary class proportions in $(output_path)"
 end
 
 function _mapping_names_binary(name)
@@ -196,43 +194,43 @@ function _mapping_names_binary(name)
     elseif name == "proportional"
         L"$\mathrm{proportional}_{{p}_{\mathcal{T}}}$"
 
-    elseif name == "domaingap_1Inf_A_low"
+    elseif name ∈ ["domaingap_1Inf_A_low", "domaingap_plus_1Inf_A_low"]
         L"$\mathrm{certificate}(1,\infty)_{{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_1Inf_A_high"
+    elseif name ∈ ["domaingap_1Inf_A_high", "domaingap_plus_1Inf_A_high"]
         L"$\mathrm{certificate}(1,\infty)_{{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_1Inf_B_low"
+    elseif name ∈ ["domaingap_1Inf_B_low", "domaingap_plus_1Inf_B_low"]
         L"$\mathrm{certificate}(1,\infty)_{{o}}^{low}$"
-    elseif name == "domaingap_1Inf_B_high"
+    elseif name ∈ ["domaingap_1Inf_B_high", "domaingap_plus_1Inf_B_high"]
         L"$\mathrm{certificate}(1,\infty)_{{o}}^{high}$"
-    elseif name == "domaingap_1Inf_C_low"
+    elseif name ∈ ["domaingap_1Inf_C_low", "domaingap_plus_1Inf_C_low"]
         L"$\mathrm{certificate}(1,\infty)_{{u}}^{low}$"
-    elseif name == "domaingap_1Inf_C_high"
+    elseif name ∈ ["domaingap_1Inf_C_high", "domaingap_plus_1Inf_C_high"]
         L"$\mathrm{certificate}(1,\infty)_{{u}}^{high}$"
 
-    elseif name == "domaingap_Inf1_A_low"
+    elseif name ∈ ["domaingap_Inf1_A_low", "domaingap_plus_Inf1_A_low"]
         L"$\mathrm{certificate}(\infty,1)_{{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_Inf1_A_high"
+    elseif name ∈ ["domaingap_Inf1_A_high", "domaingap_plus_Inf1_A_high"]
         L"$\mathrm{certificate}(\infty,1)_{{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_Inf1_B_low"
+    elseif name ∈ ["domaingap_Inf1_B_low", "domaingap_plus_Inf1_B_low"]
         L"$\mathrm{certificate}(\infty,1)_{{o}}^{low}$"
-    elseif name == "domaingap_Inf1_B_high"
+    elseif name ∈ ["domaingap_Inf1_B_high", "domaingap_plus_Inf1_B_high"]
         L"$\mathrm{certificate}(\infty,1)_{{o}}^{high}$"
-    elseif name == "domaingap_Inf1_C_low"
+    elseif name ∈ ["domaingap_Inf1_C_low", "domaingap_plus_Inf1_C_low"]
         L"$\mathrm{certificate}(\infty,1)_{{u}}^{low}$"
-    elseif name == "domaingap_Inf1_C_high"
+    elseif name ∈ ["domaingap_Inf1_C_high", "domaingap_plus_Inf1_C_high"]
         L"$\mathrm{certificate}(\infty,1)_{{u}}^{high}$"
 
-    elseif name == "domaingap_22_A_low"
+    elseif name ∈ ["domaingap_22_A_low", "domaingap_plus_22_A_low"]
         L"$\mathrm{certificate}(2,2)_{{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_22_A_high"
+    elseif name ∈ ["domaingap_22_A_high", "domaingap_plus_22_A_high"]
         L"$\mathrm{certificate}(2,2)_{{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_22_B_low"
+    elseif name ∈ ["domaingap_22_B_low", "domaingap_plus_22_B_low"]
         L"$\mathrm{certificate}(2,2)_{{o}}^{low}$"
-    elseif name == "domaingap_22_B_high"
+    elseif name ∈ ["domaingap_22_B_high", "domaingap_plus_22_B_high"]
         L"$\mathrm{certificate}(2,2)_{{o}}^{high}$"
-    elseif name == "domaingap_22_C_low"
+    elseif name ∈ ["domaingap_22_C_low", "domaingap_plus_22_C_low"]
         L"$\mathrm{certificate}(2,2)_{{u}}^{low}$"
-    elseif name == "domaingap_22_C_high"
+    elseif name ∈ ["domaingap_22_C_high", "domaingap_plus_22_C_high"]
         L"$\mathrm{certificate}(2,2)_{{u}}^{high}$"
 
     elseif name == "binary_certificate_A_low"
@@ -260,43 +258,43 @@ function _mapping_names_multiclass(name)
     elseif name == "proportional"
         L"$\mathrm{proportional}_{\mathbf{p}_{\mathcal{T}}}$"
 
-    elseif name == "domaingap_1Inf_A_low"
+    elseif name ∈ ["domaingap_1Inf_A_low", "domaingap_plus_1Inf_A_low"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_1Inf_A_high"
+    elseif name ∈ ["domaingap_1Inf_A_high", "domaingap_plus_1Inf_A_high"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_1Inf_B_low"
+    elseif name ∈ ["domaingap_1Inf_B_low", "domaingap_plus_1Inf_B_low"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{o}}^{low}$"
-    elseif name == "domaingap_1Inf_B_high"
+    elseif name ∈ ["domaingap_1Inf_B_high", "domaingap_plus_1Inf_B_high"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{o}}^{high}$"
-    elseif name == "domaingap_1Inf_C_low"
+    elseif name ∈ ["domaingap_1Inf_C_low", "domaingap_plus_1Inf_C_low"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{low}$"
-    elseif name == "domaingap_1Inf_C_high"
+    elseif name ∈ ["domaingap_1Inf_C_high", "domaingap_plus_1Inf_C_high"]
         L"$\mathrm{certificate}(1,\infty)_{\mathbf{u}}^{high}$"
 
-    elseif name == "domaingap_Inf1_A_low"
+    elseif name ∈ ["domaingap_Inf1_A_low", "domaingap_plus_Inf1_A_low"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_Inf1_A_high"
+    elseif name ∈ ["domaingap_Inf1_A_high", "domaingap_plus_Inf1_A_high"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_Inf1_B_low"
+    elseif name ∈ ["domaingap_Inf1_B_low", "domaingap_plus_Inf1_B_low"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{o}}^{low}$"
-    elseif name == "domaingap_Inf1_B_high"
+    elseif name ∈ ["domaingap_Inf1_B_high", "domaingap_plus_Inf1_B_high"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{o}}^{high}$"
-    elseif name == "domaingap_Inf1_C_low"
+    elseif name ∈ ["domaingap_Inf1_C_low", "domaingap_plus_Inf1_C_low"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{u}}^{low}$"
-    elseif name == "domaingap_Inf1_C_high"
+    elseif name ∈ ["domaingap_Inf1_C_high", "domaingap_plus_Inf1_C_high"]
         L"$\mathrm{certificate}(\infty,1)_{\mathbf{u}}^{high}$"
 
-    elseif name == "domaingap_22_A_low"
+    elseif name ∈ ["domaingap_22_A_low", "domaingap_plus_22_A_low"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{p}_{\mathcal{T}}}^{low}$"
-    elseif name == "domaingap_22_A_high"
+    elseif name ∈ ["domaingap_22_A_high", "domaingap_plus_22_A_high"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{p}_{\mathcal{T}}}^{high}$"
-    elseif name == "domaingap_22_B_low"
+    elseif name ∈ ["domaingap_22_B_low", "domaingap_plus_22_B_low"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{o}}^{low}$"
-    elseif name == "domaingap_22_B_high"
+    elseif name ∈ ["domaingap_22_B_high", "domaingap_plus_22_B_high"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{o}}^{high}$"
-    elseif name == "domaingap_22_C_low"
+    elseif name ∈ ["domaingap_22_C_low", "domaingap_plus_22_C_low"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{u}}^{low}$"
-    elseif name == "domaingap_22_C_high"
+    elseif name ∈ ["domaingap_22_C_high", "domaingap_plus_22_C_high"]
         L"$\mathrm{certificate}(2,2)_{\mathbf{u}}^{high}$"
 
     elseif name == "binary_certificate_A_low"

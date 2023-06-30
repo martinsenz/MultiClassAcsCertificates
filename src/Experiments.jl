@@ -23,6 +23,9 @@ import AcsCertificates.Certificates: beta_parameters, suggest_acquisition
 warnings = pyimport("warnings")
 warnings.filterwarnings("ignore") 
 
+# python imports
+compute_sample_weight(args...; kwargs...) = pyimport("sklearn.utils.class_weight").compute_sample_weight(args...; kwargs...)
+
 function run(configfile::String)
     c = parsefile(configfile)
     funname = "Experiments." * c["job"]    

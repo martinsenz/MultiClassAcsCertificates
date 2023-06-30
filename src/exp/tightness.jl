@@ -2,7 +2,7 @@
 """
     tightness(config_path)
     
-Performs the tightness experiments from Table 2 and produce ternary plots (included Fig.1, Fig.2)
+Performs the tightness experiments
 """
 function tightness(config_path::String)
     config = parsefile(config_path)
@@ -83,7 +83,7 @@ function _tightness_trial(config)
         if config["clf"] === "sklearn.neural_network.MLPClassifier"
             ScikitLearn.fit!(clf, X[trn,:], y[trn])
         else
-            w_trn = MultiClassAcsCertificates.Util.compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
+            w_trn = MultiClassAcsCertificates.compute_sample_weight(Dict(zip(1:length(classes), w_y)), y[trn])
             ScikitLearn.fit!(clf, X[trn,:], y[trn]; sample_weight=w_trn)
         end
         y_h_val = ScikitLearn.predict(clf, X[val,:])
@@ -100,7 +100,7 @@ function _tightness_trial(config)
         if config["method"] === "SignedCertificate"
             certificate = Certification.SignedCertificate(L, y_h_val, y[val]; δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"])
         elseif config["method"] === "BinaryCertificate"
-            certificate = Certification.BinaryCertificate(L, Data._binary_labels(y_h_val), Data._binary_labels(y[val]); δ=config["delta"])
+            certificate = Certification.BinaryCertificate(L, Data._binary_relabeling(y_h_val), Data._binary_relabeling(y[val]); δ=config["delta"], n_trials=config["n_trials"])
         else
             hoelder_conjugate = ""
             if occursin("Inf_1", config["method"])
@@ -114,7 +114,7 @@ function _tightness_trial(config)
             end
             variant_plus = occursin("Plus", config["method"]) ? true : false # variant_plus = true => |d_(+)|_{∞} * |l|_{1}
             certificate = NormedCertificate(L, y_h_val, y[val];
-                hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"])
+                hoelder_conjugate=hoelder_conjugate, δ=config["delta"], classes=classes, w_y=w_y, pac_bounds=config["pac_bounds"], n_trials=config["n_trials"])
         end
          
         # test the certificate for a variety of points
@@ -130,7 +130,6 @@ function _tightness_trial(config)
             ℓNorm = Inf
             ℓNormBounded = Inf
             ϵ_lower = Inf
-
             if config["method"] === "SignedCertificate"
                 ϵ_lower, ϵ_cert = ϵ_cert 
             elseif isa(certificate, Certification.NormedCertification)
@@ -147,7 +146,6 @@ function _tightness_trial(config)
             L_T_empirical = sum(L_T_classwise .* pY_tst)
             δ_tst = config["delta"] * 2 # needed for a fair comparison
             ϵ_tst = Certification._ϵ(length(y_pY) * config["sample_size_multiplier"], δ_tst)
-            # check_instances(y_pY, classes)
             
             # update results 
             df_row = [i_rskf, config["data"], config["loss"], config["clf"], config["delta"], config["weight"], config["method"],
@@ -164,13 +162,13 @@ _logspace(l::Real, u::Real, n::Int) = 10. .^ (log10(l):((log10(u)-log10(l))/(n-1
 function _logarithmic_pY_T_sampling(pY_S::Vector{Float64}, n_steps::Int64)
     pY = pY_S[2]
     if (pY >= 0.0) & (pY < 0.34)
-        l = 0.01
+        l = 0.05
         u = 0.5
     elseif (pY >= 0.34) & (pY < 0.66)
         l = 0.25
         u = 0.75
     elseif (pY >= 0.66) & (pY <= 1.0)
-        l = 0.99
+        l = 0.95
         u = 0.50
     end
     pY_tst = _logspace(l,u,n_steps)
@@ -193,12 +191,4 @@ function _class_weights(pY, weight)
         "sqrt" => sqrt.(ones ./ pY)
     )[weight]
     return w_y ./ maximum(w_y) # w_y ∈ [0, 1]
-end
-
-function check_instances(y, classes, min_instances=20)
-    for class in classes
-        if sum(y .== class) < min_instances
-            @warn "For class $(class) there exist only $(sum(y .== class)) instances."
-        end
-    end
 end

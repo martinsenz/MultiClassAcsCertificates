@@ -1,14 +1,12 @@
-
-# 
 job: tightness
-writepath: "res/experiments/CheckSGD.csv"
+writepath: "res/experiments/tightness_binary.csv"
 
 # mehod to estimate domain gap
 method:
   - BinaryCertificate 
-  - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
-  - NormedCertificatePlus_2_2 # |d_{+}|_{2} * |l|_{2}
   - NormedCertificatePlus_1_Inf # |d_{+}|_{1} * |l|_{∞}
+  - NormedCertificatePlus_2_2 # |d_{+}|_{2} * |l|_{2}
+  - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
 
 # datasets to be tested
 data:
@@ -38,11 +36,11 @@ data:
   # - coil_2000
   # - optical_digits
 
-# used loss function
+# which loss to evaluate
 loss:
   - ZeroOneLoss
 
-# classifier
+# which classifiers to train
 clf:
   - sklearn.neural_network.MLPClassifier
 
@@ -54,6 +52,7 @@ weight:
 delta:
   - 0.05
 
+# using PAC bounds
 pac_bounds: true
 
 # how to sub-sample the test set
