@@ -1,0 +1,48 @@
+job: tightness
+writepath: "res/experiments/test_tightness_multiclass.csv"
+
+# mehod to estimate domain gap
+method:
+  - NormedCertificatePlus_1_Inf # |d_{+}|_{1} * |l|_{∞}
+  - NormedCertificatePlus_2_2 # |d_{+}|_{2} * |l|_{2}
+  - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
+
+# datasets used
+data:
+  - optdigitsMC
+  - satimageMC
+  - pendigitsMC
+  - eyemovementsMC
+  - shuttleMC
+  - connect4MC
+
+# used loss function
+loss:
+  - ZeroOneLoss
+
+# classifier
+clf:
+  - sklearn.neural_network.MLPClassifier
+
+# class weight
+weight:
+  - uniform
+
+# parameters of the certificate 
+delta:
+  - 0.05
+n_trials: 1 # default 3
+
+# using pac bounds
+pac_bounds: true 
+
+# test points 
+pY_tst:
+  n_samples: 1000  
+  margin: 0.05
+  seed: 876
+
+# parameters for a RepeatedStratifiedKFold
+rskf:
+  n_repeats: 3
+  random_state: 123

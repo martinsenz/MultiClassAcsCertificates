@@ -1,0 +1,58 @@
+job: acquisition
+writepath: "res/experiments/test_acquisition_multiclass.csv"
+
+# datasets used
+data:
+  - optdigitsMC
+  - satimageMC
+  - pendigitsMC
+  - eyemovementsMC
+  - shuttleMC
+
+# ACS strategies
+strategy:
+  - random
+  - uniform
+  - inverse # Lomasky et al: utility ∝ 1 / class-wise accuracy
+  - improvement # Lomasky et al: utility ∝ improvement in class-wise accuracy
+  - redistriction # Lomasky et al: utility ∝ number of samples for which the prediction changes
+  - proportional # Lomasky et al: utility ∝ pY_tst
+  - proportional_estimate # proportional strategy with expected value != pY_T
+  - domaingap_plus_1Inf # |d_{+}|_{1} * |l|_{∞}
+  - domaingap_plus_22 # |d_{+}|_{2} * |l|_{2}
+  - domaingap_plus_Inf1 # |d_{+}|_{∞} * |l|_{1}
+
+# how many batches of which size to acquire during the ACS loop
+initial_trainingsize: 60
+batchsize: 30
+n_batches: 10
+pY_T: [0.7, 0.2, 0.1] # true class proportions
+
+# class prior settings
+estimate_pY_T:
+  B_low: 
+    [17.161071363877603, 2.2666703557889467, 2.62379914012208]
+    # [0.7782254978458724, 0.10278965856405343, 0.11898484359007418]
+    # [0.007487159899557319, 0.004000771367835772, 0.004547524663255025]
+  B_high: 
+    [10.740962063330857, 1.7419657976874172, 2.128268842615437]
+    # [0.7351185725026649, 0.11922129535455515, 0.14566013214277992]
+    # [0.012473051269604823, 0.0067264271972241035, 0.00797141054650615]
+
+# which classifiers to train
+clf:
+  - sklearn.neural_network.MLPClassifier
+
+# which loss to evaluate
+loss:
+  - ZeroOneLoss
+
+# parameters of the certificate 
+delta: # probability budget
+  - 0.05
+n_trials: 1 # number of optimization trials
+
+# parameters for a RepeatedStratifiedKFold
+rskf:
+  n_repeats: 3 # yields 15 repetitions due to n_splits=3
+  random_state: 123

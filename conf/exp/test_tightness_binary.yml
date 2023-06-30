@@ -1,0 +1,48 @@
+job: tightness
+writepath: "res/experiments/test_tightness_binary.csv"
+
+# mehod to estimate domain gap
+method:
+  - BinaryCertificate 
+  - NormedCertificatePlus_1_Inf # |d_{+}|_{1} * |l|_{∞}
+  - NormedCertificatePlus_2_2 # |d_{+}|_{2} * |l|_{2}
+  - NormedCertificatePlus_Inf_1 # |d_{+}|_{∞} * |l|_{1}
+
+# datasets to be tested
+data:
+  - optdigitsBinary
+  - satimageBinary
+  - pendigitsBinary
+  - fact_balanced
+  - fact_imbalanced
+  - letter_img
+  - coil_2000
+
+# which loss to evaluate
+loss:
+  - ZeroOneLoss
+
+# which classifiers to train
+clf:
+  - sklearn.neural_network.MLPClassifier
+
+# class weight
+weight:
+  - uniform
+
+# parameters of the certificate 
+delta:
+  - 0.05
+n_trials: 1 # default 3
+
+# using PAC bounds
+pac_bounds: true
+
+# how to sub-sample the test set
+pY_tst:
+  n: 10 # number of logarithmically equidistant steps
+
+# parameters for a RepeatedStratifiedKFold
+rskf:
+  n_repeats: 3
+  random_state: 123
