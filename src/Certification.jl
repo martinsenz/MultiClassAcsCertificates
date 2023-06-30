@@ -18,10 +18,11 @@ _δ(m, ϵ) = exp(-2 * m * ϵ^2)
 The class-wise risk of predictions `y_h` under the loss function `L`.
 """
 function empirical_classwise_risk(L, y_h, y, classes) 
+    _relabeling(y, labels) = replace(y_i -> y_i == y ? 1 : -1, labels)
     classwise_risk = []  
     for y_i in classes
-        y_binary = Data._binary_relabeling(y_i)
-        ŷ_binary = Data._binary_relabeling(y_i)
+        y_binary = _relabeling(y_i, y[y.==y_i])
+        ŷ_binary = _relabeling(y_i, y_h[y.==y_i])
         push!(classwise_risk, LossFunctions.value(L, y_binary, ŷ_binary, AggMode.Mean()))
     end
     classwise_risk
